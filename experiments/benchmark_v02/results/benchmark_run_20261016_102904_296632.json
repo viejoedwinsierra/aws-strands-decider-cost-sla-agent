@@ -1,0 +1,563 @@
+{
+  "benchmark": "benchmark_v02",
+  "evaluation_level": "intent_guided",
+  "dataset_role": "development",
+  "timestamp_utc": "2026-10-16T10:29:04.293710+00:00",
+  "checkpoint": "StrandsAgents/strands-decider-2B-hobson-v21",
+  "model_loading_seconds": 8.342,
+  "gpu_peak_memory_gib": 3.61,
+  "summary": {
+    "total": 30,
+    "correct": 28,
+    "accuracy": 0.9333,
+    "macro_f1": 0.9312,
+    "average_latency_ms": 178.881,
+    "predictions_by_tool": {
+      "analyze_capacity": 8,
+      "evaluate_sla_risk": 11,
+      "estimate_cost_efficiency": 11
+    }
+  },
+  "results": [
+    {
+      "scenario_id": "V2-A-001",
+      "difficulty": "clear",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 2423.534,
+      "probabilities": {
+        "analyze_capacity": 0.9316,
+        "evaluate_sla_risk": 0.0458,
+        "estimate_cost_efficiency": 0.0226
+      },
+      "confidence": 0.8974,
+      "usage": {
+        "input_tokens": 132,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-002",
+      "difficulty": "clear",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 88.689,
+      "probabilities": {
+        "analyze_capacity": 0.8934,
+        "evaluate_sla_risk": 0.0607,
+        "estimate_cost_efficiency": 0.0458
+      },
+      "confidence": 0.8402,
+      "usage": {
+        "input_tokens": 129,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-003",
+      "difficulty": "clear",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 95.341,
+      "probabilities": {
+        "analyze_capacity": 0.9127,
+        "evaluate_sla_risk": 0.048,
+        "estimate_cost_efficiency": 0.0393
+      },
+      "confidence": 0.8691,
+      "usage": {
+        "input_tokens": 130,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-004",
+      "difficulty": "clear",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 83.931,
+      "probabilities": {
+        "analyze_capacity": 0.9095,
+        "evaluate_sla_risk": 0.0659,
+        "estimate_cost_efficiency": 0.0245
+      },
+      "confidence": 0.8643,
+      "usage": {
+        "input_tokens": 135,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-005",
+      "difficulty": "ambiguous",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 120.322,
+      "probabilities": {
+        "analyze_capacity": 0.8944,
+        "evaluate_sla_risk": 0.0699,
+        "estimate_cost_efficiency": 0.0358
+      },
+      "confidence": 0.8415,
+      "usage": {
+        "input_tokens": 131,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-006",
+      "difficulty": "ambiguous",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 95.892,
+      "probabilities": {
+        "analyze_capacity": 0.7392,
+        "evaluate_sla_risk": 0.2262,
+        "estimate_cost_efficiency": 0.0346
+      },
+      "confidence": 0.6089,
+      "usage": {
+        "input_tokens": 128,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-007",
+      "difficulty": "ambiguous",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 100.148,
+      "probabilities": {
+        "analyze_capacity": 0.9412,
+        "evaluate_sla_risk": 0.0379,
+        "estimate_cost_efficiency": 0.0208
+      },
+      "confidence": 0.9118,
+      "usage": {
+        "input_tokens": 136,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-008",
+      "difficulty": "conflicting",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "analyze_capacity",
+      "correct": true,
+      "latency_ms": 89.837,
+      "probabilities": {
+        "analyze_capacity": 0.8161,
+        "evaluate_sla_risk": 0.1044,
+        "estimate_cost_efficiency": 0.0794
+      },
+      "confidence": 0.7242,
+      "usage": {
+        "input_tokens": 128,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-009",
+      "difficulty": "conflicting",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": false,
+      "latency_ms": 102.934,
+      "probabilities": {
+        "analyze_capacity": 0.4446,
+        "evaluate_sla_risk": 0.532,
+        "estimate_cost_efficiency": 0.0233
+      },
+      "confidence": 0.2981,
+      "usage": {
+        "input_tokens": 132,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-A-010",
+      "difficulty": "conflicting",
+      "expected_tool": "analyze_capacity",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": false,
+      "latency_ms": 114.657,
+      "probabilities": {
+        "analyze_capacity": 0.4633,
+        "evaluate_sla_risk": 0.0569,
+        "estimate_cost_efficiency": 0.4798
+      },
+      "confidence": 0.2197,
+      "usage": {
+        "input_tokens": 125,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-001",
+      "difficulty": "clear",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 83.609,
+      "probabilities": {
+        "analyze_capacity": 0.043,
+        "evaluate_sla_risk": 0.9441,
+        "estimate_cost_efficiency": 0.0129
+      },
+      "confidence": 0.9161,
+      "usage": {
+        "input_tokens": 130,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-002",
+      "difficulty": "clear",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 90.488,
+      "probabilities": {
+        "analyze_capacity": 0.0268,
+        "evaluate_sla_risk": 0.9653,
+        "estimate_cost_efficiency": 0.0079
+      },
+      "confidence": 0.9479,
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-003",
+      "difficulty": "clear",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 94.13,
+      "probabilities": {
+        "analyze_capacity": 0.3804,
+        "evaluate_sla_risk": 0.5995,
+        "estimate_cost_efficiency": 0.0201
+      },
+      "confidence": 0.3992,
+      "usage": {
+        "input_tokens": 132,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-004",
+      "difficulty": "clear",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 115.602,
+      "probabilities": {
+        "analyze_capacity": 0.0272,
+        "evaluate_sla_risk": 0.9642,
+        "estimate_cost_efficiency": 0.0087
+      },
+      "confidence": 0.9462,
+      "usage": {
+        "input_tokens": 133,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-005",
+      "difficulty": "ambiguous",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 98.693,
+      "probabilities": {
+        "analyze_capacity": 0.032,
+        "evaluate_sla_risk": 0.957,
+        "estimate_cost_efficiency": 0.011
+      },
+      "confidence": 0.9354,
+      "usage": {
+        "input_tokens": 132,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-006",
+      "difficulty": "ambiguous",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 97.87,
+      "probabilities": {
+        "analyze_capacity": 0.0564,
+        "evaluate_sla_risk": 0.9289,
+        "estimate_cost_efficiency": 0.0147
+      },
+      "confidence": 0.8934,
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-007",
+      "difficulty": "ambiguous",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 87.983,
+      "probabilities": {
+        "analyze_capacity": 0.0366,
+        "evaluate_sla_risk": 0.9489,
+        "estimate_cost_efficiency": 0.0144
+      },
+      "confidence": 0.9234,
+      "usage": {
+        "input_tokens": 135,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-008",
+      "difficulty": "conflicting",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 94.746,
+      "probabilities": {
+        "analyze_capacity": 0.0467,
+        "evaluate_sla_risk": 0.935,
+        "estimate_cost_efficiency": 0.0182
+      },
+      "confidence": 0.9025,
+      "usage": {
+        "input_tokens": 132,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-009",
+      "difficulty": "conflicting",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 125.448,
+      "probabilities": {
+        "analyze_capacity": 0.0327,
+        "evaluate_sla_risk": 0.8363,
+        "estimate_cost_efficiency": 0.131
+      },
+      "confidence": 0.7545,
+      "usage": {
+        "input_tokens": 127,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-B-010",
+      "difficulty": "conflicting",
+      "expected_tool": "evaluate_sla_risk",
+      "selected_tool": "evaluate_sla_risk",
+      "correct": true,
+      "latency_ms": 95.196,
+      "probabilities": {
+        "analyze_capacity": 0.1355,
+        "evaluate_sla_risk": 0.8467,
+        "estimate_cost_efficiency": 0.0178
+      },
+      "confidence": 0.77,
+      "usage": {
+        "input_tokens": 128,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-001",
+      "difficulty": "clear",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 99.646,
+      "probabilities": {
+        "analyze_capacity": 0.1025,
+        "evaluate_sla_risk": 0.0725,
+        "estimate_cost_efficiency": 0.825
+      },
+      "confidence": 0.7374,
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-002",
+      "difficulty": "clear",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 101.117,
+      "probabilities": {
+        "analyze_capacity": 0.1515,
+        "evaluate_sla_risk": 0.0359,
+        "estimate_cost_efficiency": 0.8125
+      },
+      "confidence": 0.7188,
+      "usage": {
+        "input_tokens": 141,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-003",
+      "difficulty": "clear",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 93.713,
+      "probabilities": {
+        "analyze_capacity": 0.0621,
+        "evaluate_sla_risk": 0.0315,
+        "estimate_cost_efficiency": 0.9064
+      },
+      "confidence": 0.8596,
+      "usage": {
+        "input_tokens": 143,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-004",
+      "difficulty": "clear",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 99.175,
+      "probabilities": {
+        "analyze_capacity": 0.0424,
+        "evaluate_sla_risk": 0.0262,
+        "estimate_cost_efficiency": 0.9314
+      },
+      "confidence": 0.8971,
+      "usage": {
+        "input_tokens": 146,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-005",
+      "difficulty": "ambiguous",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 122.48,
+      "probabilities": {
+        "analyze_capacity": 0.1131,
+        "evaluate_sla_risk": 0.0431,
+        "estimate_cost_efficiency": 0.8438
+      },
+      "confidence": 0.7657,
+      "usage": {
+        "input_tokens": 128,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-006",
+      "difficulty": "ambiguous",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 91.81,
+      "probabilities": {
+        "analyze_capacity": 0.105,
+        "evaluate_sla_risk": 0.1725,
+        "estimate_cost_efficiency": 0.7225
+      },
+      "confidence": 0.5838,
+      "usage": {
+        "input_tokens": 123,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-007",
+      "difficulty": "ambiguous",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 91.968,
+      "probabilities": {
+        "analyze_capacity": 0.1332,
+        "evaluate_sla_risk": 0.0272,
+        "estimate_cost_efficiency": 0.8396
+      },
+      "confidence": 0.7594,
+      "usage": {
+        "input_tokens": 121,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-008",
+      "difficulty": "conflicting",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 128.764,
+      "probabilities": {
+        "analyze_capacity": 0.0476,
+        "evaluate_sla_risk": 0.0923,
+        "estimate_cost_efficiency": 0.8601
+      },
+      "confidence": 0.7901,
+      "usage": {
+        "input_tokens": 133,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-009",
+      "difficulty": "conflicting",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 123.376,
+      "probabilities": {
+        "analyze_capacity": 0.0498,
+        "evaluate_sla_risk": 0.0619,
+        "estimate_cost_efficiency": 0.8884
+      },
+      "confidence": 0.8325,
+      "usage": {
+        "input_tokens": 135,
+        "output_tokens": 1
+      }
+    },
+    {
+      "scenario_id": "V2-C-010",
+      "difficulty": "conflicting",
+      "expected_tool": "estimate_cost_efficiency",
+      "selected_tool": "estimate_cost_efficiency",
+      "correct": true,
+      "latency_ms": 115.334,
+      "probabilities": {
+        "analyze_capacity": 0.1004,
+        "evaluate_sla_risk": 0.0816,
+        "estimate_cost_efficiency": 0.818
+      },
+      "confidence": 0.727,
+      "usage": {
+        "input_tokens": 134,
+        "output_tokens": 1
+      }
+    }
+  ]
+}
