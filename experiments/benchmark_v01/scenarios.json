@@ -1,0 +1,74 @@
+[
+  {
+    "scenario_id": "A-001",
+    "difficulty": "clear",
+    "state": "CPU utilization is 12%. Memory utilization is 18%. API response times are stable.",
+    "question": "Is the current infrastructure capacity overprovisioned?",
+    "expected_tool": "analyze_capacity",
+    "reason": "The objective is to assess resource utilization and capacity."
+  },
+  {
+    "scenario_id": "A-002",
+    "difficulty": "ambiguous",
+    "state": "CPU utilization is 92%. API latency remains within the SLA. Error rate is stable.",
+    "question": "Can the current compute capacity sustain additional workload?",
+    "expected_tool": "analyze_capacity",
+    "reason": "The question concerns available processing capacity."
+  },
+  {
+    "scenario_id": "A-003",
+    "difficulty": "conflicting",
+    "state": "CPU utilization is 25%. The processing queue is growing and throughput is decreasing.",
+    "question": "Which infrastructure component is limiting processing capacity?",
+    "expected_tool": "analyze_capacity",
+    "reason": "Low CPU does not exclude capacity constraints elsewhere."
+  },
+  {
+    "scenario_id": "B-001",
+    "difficulty": "clear",
+    "state": "API p95 latency is 850 ms. The SLA threshold is 500 ms. Error rate is increasing.",
+    "question": "What is the risk of violating the service level agreement?",
+    "expected_tool": "evaluate_sla_risk",
+    "reason": "The objective is to evaluate SLA noncompliance."
+  },
+  {
+    "scenario_id": "B-002",
+    "difficulty": "ambiguous",
+    "state": "API p95 latency is 480 ms against a 500 ms SLA threshold. Traffic variability is increasing.",
+    "question": "How likely is the service to breach its latency objective?",
+    "expected_tool": "evaluate_sla_risk",
+    "reason": "The decision concerns future SLA risk."
+  },
+  {
+    "scenario_id": "B-003",
+    "difficulty": "conflicting",
+    "state": "CPU utilization is 30%. API latency is stable, but the transaction error rate has reached 8%.",
+    "question": "Does the current failure rate threaten service reliability commitments?",
+    "expected_tool": "evaluate_sla_risk",
+    "reason": "Reliability risk is not determined by CPU utilization alone."
+  },
+  {
+    "scenario_id": "C-001",
+    "difficulty": "clear",
+    "state": "EC2 option A costs $0.10 per hour. Option B costs $0.07 per hour. Both meet the SLA.",
+    "question": "Which configuration provides better cost efficiency?",
+    "expected_tool": "estimate_cost_efficiency",
+    "reason": "The objective is an economic comparison of configurations."
+  },
+  {
+    "scenario_id": "C-002",
+    "difficulty": "ambiguous",
+    "state": "A smaller instance reduces hourly cost by 25%, but its p95 latency approaches the SLA threshold.",
+    "question": "Is the proposed cost saving justified by the performance trade-off?",
+    "expected_tool": "estimate_cost_efficiency",
+    "reason": "The decision compares economic benefit against performance risk."
+  },
+  {
+    "scenario_id": "C-003",
+    "difficulty": "conflicting",
+    "state": "Configuration A has lower infrastructure costs but recurring SLA penalties. Configuration B costs more but avoids those penalties.",
+    "question": "Which configuration minimizes total technological cost including SLA penalties?",
+    "expected_tool": "estimate_cost_efficiency",
+    "reason": "The objective is to compare total cost, including penalties."
+  }
+]
