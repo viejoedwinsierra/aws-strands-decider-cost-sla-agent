@@ -50,7 +50,7 @@ def main():
         parser.error("concurrency must be between 1 and 10")
     if not 0 < args.timeout <= 10:
         parser.error("timeout must be between 0 and 10 seconds")
-    if not args.url.startswith("http://127.0.0.1:8080/"):
+    if not args.url.startswith(("http://127.0.0.1:8080/", "http://127.0.0.1:18080/")):
         parser.error("Only the local EXP-001 server is allowed")
 
     started_at = datetime.now(timezone.utc).isoformat()

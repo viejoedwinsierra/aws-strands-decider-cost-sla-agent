@@ -231,3 +231,6 @@ experiments/exp001_capacity/config/experiment.env
 # AWS credentials
 .aws/
 **/.aws/
+
+# Temporary script backups
+*.bak
