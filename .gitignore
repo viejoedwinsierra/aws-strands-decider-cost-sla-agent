@@ -218,3 +218,10 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# EXP-001 local configuration and runtime artifacts
+experiments/exp001_capacity/config/experiment.env
+experiments/exp001_capacity/results/*
+!experiments/exp001_capacity/results/.gitkeep
+experiments/exp001_capacity/evidence/*
+!experiments/exp001_capacity/evidence/.gitkeep
