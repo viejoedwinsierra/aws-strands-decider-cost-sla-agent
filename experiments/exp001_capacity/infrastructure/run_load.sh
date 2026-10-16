@@ -90,14 +90,14 @@ manifest = {
 }
 
 Path(sys.argv[1]).write_text(
-    json.dumps(manifest, indent=2) + "\\n",
+    json.dumps(manifest, indent=2) + "\n",
     encoding="utf-8",
 )
 MANIFEST
 
-aws_cli s3 cp \\
-  "$LOCAL_DIR/run_manifest.json" \\
-  "$S3_PREFIX/run_manifest.json" \\
+aws_cli s3 cp \
+  "$LOCAL_DIR/run_manifest.json" \
+  "$S3_PREFIX/run_manifest.json" \
   --sse AES256 --no-progress
 
 echo "RUN_MANIFEST_UPLOADED"
@@ -195,7 +195,7 @@ if aws_cli s3 cp \
   "$DOWNLOAD_DIR/" \
   --recursive \
   --no-progress; then
-  cp -a "$DOWNLOAD_DIR/." "$LOCAL_DIR/" || DOWNLOAD_STATUS=$?
+  cp -R "$DOWNLOAD_DIR/." "$LOCAL_DIR/" || DOWNLOAD_STATUS=$?
 else
   DOWNLOAD_STATUS=$?
 fi
