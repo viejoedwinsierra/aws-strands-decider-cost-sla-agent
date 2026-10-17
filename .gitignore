@@ -234,3 +234,6 @@ experiments/exp001_capacity/config/experiment.env
 
 # Temporary script backups
 *.bak
+
+# EXP-001: generated offline Python dependencies
+/experiments/exp001_capacity/dependencies/**/*.whl
