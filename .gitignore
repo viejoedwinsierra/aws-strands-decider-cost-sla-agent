@@ -240,3 +240,6 @@ experiments/exp001_capacity/config/experiment.env
 
 # EXP-001 generated AWS bucket history
 /experiments/exp001_capacity/config/evidence_bucket_history.json
+
+# EXP-001 | Local AWS Sandbox credentials
+/experiments/exp001_capacity/config/aws_credentials.txt
