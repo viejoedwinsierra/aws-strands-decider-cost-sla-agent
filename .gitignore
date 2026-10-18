@@ -237,3 +237,6 @@ experiments/exp001_capacity/config/experiment.env
 
 # EXP-001: generated offline Python dependencies
 /experiments/exp001_capacity/dependencies/**/*.whl
+
+# EXP-001 generated AWS bucket history
+/experiments/exp001_capacity/config/evidence_bucket_history.json

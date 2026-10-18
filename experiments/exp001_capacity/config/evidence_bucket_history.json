@@ -1,7 +1,0 @@
-[
-  {
-    "bucket": "aws-cost-sla-evidence-389844285448-1792175655",
-    "replaced_at_utc": "2026-10-17T16:36:34.943617+00:00",
-    "reason": "Bucket inaccessible during AWS Academy recovery"
-  }
-]
