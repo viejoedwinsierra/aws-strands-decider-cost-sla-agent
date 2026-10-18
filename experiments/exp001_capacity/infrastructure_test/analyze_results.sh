@@ -3,7 +3,16 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
+# Preserve scenario-specific parameters supplied by the sequence runner.
+RUNNER_USERS="${USERS-}"
+RUNNER_SPAWN_RATE="${SPAWN_RATE-}"
+RUNNER_DURATION_SECONDS="${DURATION_SECONDS-}"
+
 source "$BASE_DIR/config/experiment.env"
+
+[[ -z "$RUNNER_USERS" ]] || USERS="$RUNNER_USERS"
+[[ -z "$RUNNER_SPAWN_RATE" ]] || SPAWN_RATE="$RUNNER_SPAWN_RATE"
+[[ -z "$RUNNER_DURATION_SECONDS" ]] || DURATION_SECONDS="$RUNNER_DURATION_SECONDS"
 
 AWS_PROFILE="${AWS_PROFILE:-academy-sandbox}"
 AWS_REGION="${AWS_REGION:-us-east-1}"

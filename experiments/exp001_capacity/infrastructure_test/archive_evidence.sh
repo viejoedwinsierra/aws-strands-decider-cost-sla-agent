@@ -205,5 +205,26 @@ for name, metadata in manifest["files"].items():
 print(f"S3_REMOTE_INTEGRITY_PASSED: {len(manifest['files'])} files")
 VERIFY_REMOTE
 
+# Integrity alone does not guarantee evidence completeness.
+python3 - "$RESULTS_DIR/evidence_manifest.json" <<'CHECK_COMPLETENESS'
+import json
+import sys
+from pathlib import Path
+
+manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
+status = manifest.get("archive_status")
+missing = manifest.get("missing_files", [])
+
+if status != "COMPLETE" or missing:
+    print(
+        f"ERROR: Incomplete evidence archive: "
+        f"status={status}, missing={missing}",
+        file=sys.stderr,
+    )
+    raise SystemExit(1)
+
+print("EVIDENCE_COMPLETENESS_PASSED")
+CHECK_COMPLETENESS
+
 echo "S3 archive: $S3_PREFIX/"
 echo "Local backup: $RESULTS_DIR"

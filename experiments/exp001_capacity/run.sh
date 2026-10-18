@@ -10,9 +10,20 @@ CONFIG="$BASE_DIR/config/experiment.env"
   exit 1
 }
 
+# Preserve explicit parameters provided by the sequence runner.
+RUNNER_USERS="${USERS-}"
+RUNNER_SPAWN_RATE="${SPAWN_RATE-}"
+RUNNER_DURATION="${DURATION-}"
+RUNNER_RUN_ID="${RUN_ID-}"
+
 set -a
 source "$CONFIG"
 set +a
+
+[[ -z "$RUNNER_USERS" ]] || USERS="$RUNNER_USERS"
+[[ -z "$RUNNER_SPAWN_RATE" ]] || SPAWN_RATE="$RUNNER_SPAWN_RATE"
+[[ -z "$RUNNER_DURATION" ]] || DURATION="$RUNNER_DURATION"
+[[ -z "$RUNNER_RUN_ID" ]] || RUN_ID="$RUNNER_RUN_ID"
 
 export AWS_PROFILE="${AWS_PROFILE:-academy-sandbox}"
 export AWS_REGION="${AWS_REGION:-us-east-1}"
@@ -26,7 +37,7 @@ export SPAWN_RATE="${SPAWN_RATE:-1}"
 export DURATION="${DURATION:-60s}"
 export DURATION_SECONDS="${DURATION%s}"
 
-export RUN_ID="private_ec2_$(date -u +%Y%m%dT%H%M%SZ)"
+export RUN_ID="${RUN_ID:-private_ec2_$(date -u +%Y%m%dT%H%M%SZ)}"
 
 echo "=================================="
 echo "EXP-001 | Automated Experiment"

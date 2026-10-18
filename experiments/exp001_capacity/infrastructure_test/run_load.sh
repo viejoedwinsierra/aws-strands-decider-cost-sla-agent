@@ -9,9 +9,20 @@ CONFIG_FILE="${SCRIPT_DIR}/../config/experiment.env"
   exit 1
 }
 
+# Preserve parameters supplied by the experiment orchestrator.
+RUNNER_USERS="${USERS-}"
+RUNNER_SPAWN_RATE="${SPAWN_RATE-}"
+RUNNER_DURATION="${DURATION-}"
+RUNNER_RUN_ID="${RUN_ID-}"
+
 set -a
 source "$CONFIG_FILE"
 set +a
+
+[[ -z "$RUNNER_USERS" ]] || USERS="$RUNNER_USERS"
+[[ -z "$RUNNER_SPAWN_RATE" ]] || SPAWN_RATE="$RUNNER_SPAWN_RATE"
+[[ -z "$RUNNER_DURATION" ]] || DURATION="$RUNNER_DURATION"
+[[ -z "$RUNNER_RUN_ID" ]] || RUN_ID="$RUNNER_RUN_ID"
 
 AWS_PROFILE="${AWS_PROFILE:-academy-sandbox}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
