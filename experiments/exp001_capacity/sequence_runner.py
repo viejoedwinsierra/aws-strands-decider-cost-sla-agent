@@ -16,7 +16,7 @@ import yaml
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_CONFIG = BASE_DIR / "config" / "test_sequence.yml"
-RUN_SCRIPT = BASE_DIR / "run.sh"
+RUN_SCRIPT = BASE_DIR / "infrastructure_test" / "run.sh"
 
 
 def utc_now():

@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-BASE_DIR="$SCRIPT_DIR"
+BASE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 SCRIPT_DIR="$BASE_DIR/infrastructure"
 
 CONFIG="$BASE_DIR/config/experiment.env"
