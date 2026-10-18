@@ -40,24 +40,7 @@ echo "Target: http://$HTTP_PRIVATE_IP:8080/health"
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 
-python3 - "$TMP" "$HTTP_PRIVATE_IP" <<'PY'
-import json
-import sys
-from pathlib import Path
-
-destination = Path(sys.argv[1])
-ip = sys.argv[2]
-
-commands = [
-    "set -eu",
-    f"curl --fail --silent --show-error --connect-timeout 5 --max-time 15 "
-    f"http://{ip}:8080/health",
-    "echo",
-    "echo NETWORK_VERIFICATION_PASSED",
-]
-
-destination.write_text(json.dumps({"commands": commands}))
-PY
+python3 "$SCRIPT_DIR/python/build_network_ssm.py" "$TMP" "$HTTP_PRIVATE_IP"
 
 COMMAND_ID="$(aws_cli ssm send-command \
   --instance-ids "$LOCUST_INSTANCE_ID" \
