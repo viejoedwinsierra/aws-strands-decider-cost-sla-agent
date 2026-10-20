@@ -49,15 +49,18 @@ EXISTS="$(aws_cli ec2 describe-security-groups \
   --output text)"
 
 if [[ " $EXISTS " == *" $LOCUST_SG "* ]]; then
-  echo "Private TCP 8080 rule already exists"
+  echo "[OK] Private TCP 8080 rule already configured"
 else
+  echo "[INFO] Authorizing TCP 8080: Locust -> HTTP"
+
   aws_cli ec2 authorize-security-group-ingress \
     --group-id "$HTTP_SG" \
     --protocol tcp \
     --port 8080 \
-    --source-group "$LOCUST_SG"
+    --source-group "$LOCUST_SG" \
+    --output json >/dev/null
 
-  echo "Private TCP 8080 rule created"
+  echo "[OK] Private TCP 8080 rule created"
 fi
 
 echo "EXP-001 | Network configuration PASSED"

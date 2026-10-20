@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(cd -- "$SCRIPT_DIR/.." && pwd)"
 
-echo "EXP-001 | Automated Deployment"
+echo "$EXPERIMENT_ID | Automated Deployment"
 
 echo "[1/8] Prepare S3"
 bash "$SCRIPT_DIR/create_bucket.sh"
@@ -42,4 +42,4 @@ bash "$SCRIPT_DIR/verify.sh"
 bash "$SCRIPT_DIR/verify_locust.sh"
 bash "$SCRIPT_DIR/verify_network.sh"
 
-echo "EXP-001 | DEPLOYMENT COMPLETED"
+echo "$EXPERIMENT_ID | DEPLOYMENT COMPLETED"

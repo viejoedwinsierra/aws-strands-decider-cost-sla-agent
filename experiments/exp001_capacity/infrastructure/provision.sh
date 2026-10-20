@@ -1,16 +1,29 @@
 #!/usr/bin/env bash
-# EXP-001: reconstruct an AWS Academy Sandbox EC2 and deploy HTTP service.
+# EXP-001 | Provision EC2 for HTTP or Locust using project configuration.
 set -euo pipefail
+
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_FILE="${SCRIPT_DIR}/../config/project.env"
 CONFIG_FILE="${SCRIPT_DIR}/../config/experiment.env"
-AWS_PROFILE="${AWS_PROFILE:-academy-sandbox}"
-AWS_REGION="${AWS_REGION:-us-east-1}"
-PROJECT_TAG="${PROJECT_TAG:-AWS-Cost-SLA-Decision-Agent}"
-EXPERIMENT_ID="${EXPERIMENT_ID:-EXP-001}"
+
+# bootstrap_all.sh already exports project variables. Loading the same file
+# here also supports direct invocation of provision.sh.
+[[ -f "$PROJECT_FILE" ]] || { echo "ERROR: Missing project.env: $PROJECT_FILE" >&2; exit 1; }
+set -a
+source "$PROJECT_FILE"
+set +a
+
+: "${AWS_PROFILE:?Missing AWS_PROFILE in project.env}"
+: "${AWS_REGION:?Missing AWS_REGION in project.env}"
+: "${PROJECT_TAG:?Missing PROJECT_TAG in project.env}"
+: "${EXPERIMENT_ID:?Missing EXPERIMENT_ID in project.env}"
+
+# Defaults remain until project.env defines both provisioning settings.
 INSTANCE_TYPE="${INSTANCE_TYPE:-t3.micro}"
 INSTANCE_PROFILE="${INSTANCE_PROFILE:-LabInstanceProfile}"
 INSTANCE_ROLE="${INSTANCE_ROLE:-http-server}"
-INSTANCE_NAME="${INSTANCE_NAME:-EXP-001-${INSTANCE_ROLE}}"
+INSTANCE_NAME="${INSTANCE_NAME:-${EXPERIMENT_ID}-${INSTANCE_ROLE}}"
+# Preserve the existing SG naming contract to reuse deployed resources.
 SG_NAME="${SG_NAME:-exp001-${INSTANCE_ROLE}-ssm-only}"
 
 aws_cli() { aws --profile "$AWS_PROFILE" --region "$AWS_REGION" "$@"; }
@@ -19,7 +32,7 @@ fail() { echo "ERROR: $*" >&2; exit 1; }
 command -v aws >/dev/null || fail "AWS CLI no instalado"
 command -v python3 >/dev/null || fail "Python 3 no instalado"
 
-printf 'EXP-001 | Provision | profile=%s region=%s\n' "$AWS_PROFILE" "$AWS_REGION" >&2
+printf '%s | Provision | profile=%s region=%s\n' "$EXPERIMENT_ID" "$AWS_PROFILE" "$AWS_REGION" >&2
 aws_cli sts get-caller-identity --query Account --output text >/dev/null || fail "Credenciales expiradas o sin autorizacion"
 
 # Reuse an existing instance, but only if both ownership tags match.
