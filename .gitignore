@@ -243,3 +243,14 @@ experiments/exp001_capacity/config/experiment.env
 
 # EXP-001 | Local AWS Sandbox credentials
 /experiments/exp001_capacity/config/aws_credentials.txt
+
+# Experimental runtime artifacts (all experiments)
+experiments/**/logs/
+experiments/**/results/*
+experiments/**/evidence/*
+experiments/**/output/
+experiments/**/outputs/
+
+# Preserve directory placeholders
+!experiments/**/results/.gitkeep
+!experiments/**/evidence/.gitkeep
