@@ -3,8 +3,7 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_FILE="${SCRIPT_DIR}/../config/experiment.env"
-HISTORY_FILE="${SCRIPT_DIR}/../config/evidence_bucket_history.json"
-TAGS_HELPER="${SCRIPT_DIR}/python/bucket_tags.py"
+TAGS_HELPER="${SCRIPT_DIR}/../../shared/python/resource_tags.py"
 
 # Configuration is exported by load_environment.sh via bootstrap_all.sh.
 : "${AWS_PROFILE:?AWS_PROFILE must be exported by bootstrap_all.sh}"
@@ -21,29 +20,39 @@ echo "$EXPERIMENT_ID | S3 bucket provisioning"
 
 ACCOUNT_ID="$(aws_cli sts get-caller-identity --query Account --output text)"
 
-# Reuse a bucket saved in the current experiment configuration.
+# Reuse only a bucket whose owner and experiment identity are verified.
 EXISTING_BUCKET=""
 if [[ -f "$CONFIG_FILE" ]]; then
   EXISTING_BUCKET="$(grep '^EVIDENCE_BUCKET=' "$CONFIG_FILE" | tail -1 | cut -d= -f2- || true)"
 fi
 
+if [[ ! -f "$TAGS_HELPER" ]]; then
+  echo "$EXPERIMENT_ID | ERROR: Missing Python helper: $TAGS_HELPER" >&2
+  exit 1
+fi
+
 if [[ -n "$EXISTING_BUCKET" ]]; then
   echo "Checking configured bucket: $EXISTING_BUCKET"
 
-  if aws_cli s3api head-bucket --bucket "$EXISTING_BUCKET" >/dev/null 2>&1; then
-    BUCKET="$EXISTING_BUCKET"
-    echo "Reusing bucket: $BUCKET"
-  else
-    echo "Previous bucket unavailable: $EXISTING_BUCKET"
-    echo "Preserving historical reference and creating a new bucket."
-
-    HISTORY_FILE="$HISTORY_FILE" OLD_BUCKET="$EXISTING_BUCKET" \
-      python3 "$SCRIPT_DIR/python/bucket_history.py"
-
-    BUCKET="aws-cost-sla-evidence-${ACCOUNT_ID}-$(date +%s)"
-    echo "Creating bucket: $BUCKET"
-    aws_cli s3api create-bucket --bucket "$BUCKET" --region "$AWS_REGION"
+  if ! aws_cli s3api head-bucket \
+      --bucket "$EXISTING_BUCKET" \
+      --expected-bucket-owner "$ACCOUNT_ID" >/dev/null; then
+    echo "$EXPERIMENT_ID | ERROR: Cannot verify existing bucket." >&2
+    echo "$EXPERIMENT_ID | Automatic replacement is disabled." >&2
+    exit 1
   fi
+
+  BUCKET="$EXISTING_BUCKET"
+  echo "$EXPERIMENT_ID | Validating bucket identity"
+
+  aws_cli s3api get-bucket-tagging \
+    --bucket "$BUCKET" \
+    --expected-bucket-owner "$ACCOUNT_ID" \
+    --output json |
+    python3 "$TAGS_HELPER" s3 check-identity \
+      --name "$BUCKET" --role "evidence-storage"
+
+  echo "Reusing verified bucket: $BUCKET"
 else
   BUCKET="aws-cost-sla-evidence-${ACCOUNT_ID}-$(date +%s)"
   echo "Creating bucket: $BUCKET"
@@ -56,21 +65,19 @@ fi
 # Block all public access.
 aws_cli s3api put-public-access-block \
   --bucket "$BUCKET" \
+  --expected-bucket-owner "$ACCOUNT_ID" \
   --public-access-block-configuration \
   'BlockPublicAcls=true,IgnorePublicAcls=true,BlockPublicPolicy=true,RestrictPublicBuckets=true'
 
 # Enable default server-side encryption.
 aws_cli s3api put-bucket-encryption \
   --bucket "$BUCKET" \
+  --expected-bucket-owner "$ACCOUNT_ID" \
   --server-side-encryption-configuration \
   '{"Rules":[{"ApplyServerSideEncryptionByDefault":{"SSEAlgorithm":"AES256"}}]}'
 
 # Read existing tags, preserving any unrelated tags on a reused bucket.
 # AWS returns NoSuchTagSet for a bucket with no tags.
-if [[ ! -f "$TAGS_HELPER" ]]; then
-  echo "$EXPERIMENT_ID | ERROR: Missing Python helper: $TAGS_HELPER" >&2
-  exit 1
-fi
 
 CURRENT_TAGS_FILE="$(mktemp)"
 MERGED_TAGS_FILE="$(mktemp)"
@@ -79,10 +86,11 @@ trap 'rm -f "$CURRENT_TAGS_FILE" "$MERGED_TAGS_FILE" "$TAG_ERROR_FILE"' EXIT
 
 echo "$EXPERIMENT_ID | Reading existing S3 bucket tags"
 if aws_cli s3api get-bucket-tagging --bucket "$BUCKET" \
+    --expected-bucket-owner "$ACCOUNT_ID" \
     --output json > "$CURRENT_TAGS_FILE" 2> "$TAG_ERROR_FILE"; then
-  python3 "$TAGS_HELPER" merge < "$CURRENT_TAGS_FILE" > "$MERGED_TAGS_FILE"
+  python3 "$TAGS_HELPER" s3 merge --name "$BUCKET" --role "evidence-storage" < "$CURRENT_TAGS_FILE" > "$MERGED_TAGS_FILE"
 elif grep -q 'NoSuchTagSet' "$TAG_ERROR_FILE"; then
-  python3 "$TAGS_HELPER" build > "$MERGED_TAGS_FILE"
+  python3 "$TAGS_HELPER" s3 build --name "$BUCKET" --role "evidence-storage" > "$MERGED_TAGS_FILE"
 else
   echo "$EXPERIMENT_ID | ERROR: Unable to read S3 bucket tags" >&2
   cat "$TAG_ERROR_FILE" >&2
@@ -92,12 +100,13 @@ fi
 echo "$EXPERIMENT_ID | Applying S3 bucket tags"
 aws_cli s3api put-bucket-tagging \
   --bucket "$BUCKET" \
+  --expected-bucket-owner "$ACCOUNT_ID" \
   --tagging "file://$MERGED_TAGS_FILE"
 
 # Fail provisioning if AWS does not return all required tags.
 echo "$EXPERIMENT_ID | Verifying S3 bucket tags"
-aws_cli s3api get-bucket-tagging --bucket "$BUCKET" --output json \
-  | python3 "$TAGS_HELPER" validate
+aws_cli s3api get-bucket-tagging --bucket "$BUCKET" --expected-bucket-owner "$ACCOUNT_ID" --output json \
+  | python3 "$TAGS_HELPER" s3 validate --name "$BUCKET" --role "evidence-storage"
 
 # Save bucket name without overwriting other configuration.
 mkdir -p "$(dirname "$CONFIG_FILE")"

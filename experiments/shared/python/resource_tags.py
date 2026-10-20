@@ -121,7 +121,78 @@ def classify_tag_differences(actual_tags, expected_tags):
         "mismatched": mismatched,
     }
 
+
+def s3_expected_tags(name, role):
+    """Build the shared contract plus S3-specific tags."""
+    tags = build_tags(name, role)
+    tags.extend([
+        {"Key": "Component", "Value": "evidence-storage"},
+        {"Key": "Purpose", "Value": "experiment-evidence"},
+    ])
+    return tags
+
+
+def s3_tag_set(tags):
+    """Format tags for AWS S3 put-bucket-tagging."""
+    return {"TagSet": sorted(tags, key=lambda tag: tag["Key"])}
+
+
+def s3_main(argv):
+    """Build, merge or validate S3 bucket tags."""
+    parser = argparse.ArgumentParser(description="S3 bucket tagging")
+    parser.add_argument("operation", choices=["build", "merge", "validate", "check-identity"])
+    parser.add_argument("--name", required=True)
+    parser.add_argument("--role", required=True)
+    args = parser.parse_args(argv)
+
+    expected = s3_expected_tags(args.name, args.role)
+
+    if args.operation == "build":
+        print(json.dumps(s3_tag_set(expected), separators=(",", ":")))
+        return 0
+
+    data = json.load(sys.stdin)
+    if not isinstance(data, dict) or not isinstance(data.get("TagSet"), list):
+        raise ValueError("S3 input must contain a TagSet array")
+
+    actual = data["TagSet"]
+    # Validate structure and reject duplicate keys before merging.
+    validate_tags(actual, [])
+
+    if args.operation == "check-identity":
+        identity_keys = {
+            "Project", "Experiment", "Environment", "ManagedBy"
+        }
+        identity_tags = [
+            tag for tag in expected if tag["Key"] in identity_keys
+        ]
+        differences = validate_tags(actual, identity_tags)
+        if differences:
+            print(json.dumps(differences, indent=2), file=sys.stderr)
+            return 1
+        print("BUCKET_IDENTITY_VALIDATION_PASSED")
+        return 0
+
+    if args.operation == "merge":
+        merged = {tag["Key"]: tag["Value"] for tag in actual}
+        merged.update({tag["Key"]: tag["Value"] for tag in expected})
+        result = [{"Key": key, "Value": value}
+                  for key, value in merged.items()]
+        print(json.dumps(s3_tag_set(result), separators=(",", ":")))
+        return 0
+
+    differences = validate_tags(actual, expected)
+    if differences:
+        print(json.dumps(differences, indent=2), file=sys.stderr)
+        return 1
+
+    print("BUCKET_TAG_VALIDATION_PASSED")
+    return 0
+
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "s3":
+        return s3_main(sys.argv[2:])
+
     # Preserve the existing CLI for tag generation.
     if len(sys.argv) > 1 and sys.argv[1] == "validate":
         parser = argparse.ArgumentParser(
@@ -176,6 +247,6 @@ def main():
 if __name__ == "__main__":
     try:
         sys.exit(main())
-    except (ValueError, KeyError, TypeError) as exc:
+    except (ValueError, KeyError, TypeError, json.JSONDecodeError) as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         sys.exit(2)
