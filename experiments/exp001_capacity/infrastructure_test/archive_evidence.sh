@@ -32,6 +32,9 @@ aws --profile "$AWS_PROFILE" --region "$AWS_REGION" \
   --include "metrics_normalized.json" \
   --include "sla_evaluation.json" \
   --include "run_manifest.json" \
+  --include "ec2_inventory.json" \
+  --include "experiment_timeline.json" \
+  --include "cloudwatch/*.json" \
   --no-progress
 
 # Copy only evidence actually retrieved from S3.
@@ -42,6 +45,9 @@ evidence_files=(
   "$TMP_DIR"/metrics_normalized.json
   "$TMP_DIR"/sla_evaluation.json
   "$TMP_DIR"/run_manifest.json
+  "$TMP_DIR"/ec2_inventory.json
+  "$TMP_DIR"/experiment_timeline.json
+  "$TMP_DIR"/cloudwatch/*.json
 )
 
 if (( ${#evidence_files[@]} == 0 )); then
@@ -55,6 +61,14 @@ if [[ "${REQUIRE_RUN_MANIFEST:-0}" == "1" &&
   exit 1
 fi
 
+# Require the EC2 inventory for new experiment executions.
+# Historical runs remain compatible when this flag is not enabled.
+if [[ "${REQUIRE_EC2_INVENTORY:-0}" == "1" &&
+      ! -f "$TMP_DIR/ec2_inventory.json" ]]; then
+  echo "ERROR: Required ec2_inventory.json missing from S3" >&2
+  exit 1
+fi
+
 # Remove stale local evidence before restoring the S3 snapshot.
 for name in \
   exp001_stats.csv \
@@ -64,20 +78,28 @@ for name in \
   metrics_normalized.json \
   sla_evaluation.json \
   run_manifest.json \
+  ec2_inventory.json \
+  experiment_timeline.json \
   evidence_manifest.json; do
   rm -f "$RESULTS_DIR/$name"
 done
 
+# Remove stale CloudWatch evidence before restoring S3 snapshot.
+rm -rf -- "$RESULTS_DIR/cloudwatch"
+
 RECOVERED_COUNT=0
 for file in "${evidence_files[@]}"; do
   [[ -f "$file" ]] || continue
-  cp "$file" "$RESULTS_DIR/"
+  relative_path="${file#"$TMP_DIR"/}"
+  destination="$RESULTS_DIR/$relative_path"
+  mkdir -p "$(dirname "$destination")"
+  cp "$file" "$destination"
   RECOVERED_COUNT=$((RECOVERED_COUNT + 1))
 done
 
 echo "Evidence files recovered: $RECOVERED_COUNT"
 
-python3 - "$RESULTS_DIR" "$RUN_ID" <<'PY'
+python3 - "$RESULTS_DIR" "$RUN_ID" "${REQUIRE_CLOUDWATCH_EVIDENCE:-0}" <<'PY'
 import hashlib
 import json
 import sys
@@ -86,6 +108,7 @@ from pathlib import Path
 
 directory = Path(sys.argv[1])
 run_id = sys.argv[2]
+require_cloudwatch = sys.argv[3] == "1"
 
 expected = [
     "exp001_stats.csv",
@@ -99,6 +122,36 @@ expected = [
 # New runs include a reproducible execution manifest.
 if (directory / "run_manifest.json").is_file():
     expected.append("run_manifest.json")
+
+# Include the EC2 inventory when available.
+# Historical runs may not contain this artifact.
+inventory_path = directory / "ec2_inventory.json"
+if inventory_path.is_file():
+    expected.append("ec2_inventory.json")
+
+# Include the experiment timeline.
+timeline_path = directory / "experiment_timeline.json"
+if timeline_path.is_file() or require_cloudwatch:
+    expected.append("experiment_timeline.json")
+
+# Derive CloudWatch evidence from the frozen EC2 inventory.
+if inventory_path.is_file():
+    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
+    instance_ids = [item["instance_id"] for item in inventory["instances"]]
+
+    if require_cloudwatch and not instance_ids:
+        raise SystemExit("ERROR: Empty EC2 inventory for CloudWatch")
+
+    if len(instance_ids) != len(set(instance_ids)):
+        raise SystemExit("ERROR: Duplicate EC2 instance IDs")
+
+    for instance_id in instance_ids:
+        name = f"cloudwatch/{instance_id}.json"
+        if require_cloudwatch or (directory / name).is_file():
+            expected.append(name)
+
+elif require_cloudwatch:
+    raise SystemExit("ERROR: EC2 inventory required for CloudWatch")
 
 files = {}
 missing = []

@@ -1,0 +1,24 @@
+{
+  "version": "1.0",
+  "description": "Shared Amazon CloudWatch EC2 metrics catalog for AWS Cost & SLA Decision Agent",
+  "namespace": "AWS/EC2",
+  "default_period_seconds": 300,
+  "metrics": {
+    "CPUUtilization": ["Average", "Maximum"],
+    "CPUCreditBalance": ["Average", "Minimum"],
+    "CPUCreditUsage": ["Sum"],
+    "CPUSurplusCreditBalance": ["Average", "Maximum"],
+    "CPUSurplusCreditsCharged": ["Sum"],
+    "NetworkIn": ["Sum"],
+    "NetworkOut": ["Sum"],
+    "NetworkPacketsIn": ["Sum"],
+    "NetworkPacketsOut": ["Sum"],
+    "EBSReadOps": ["Sum"],
+    "EBSWriteOps": ["Sum"],
+    "EBSReadBytes": ["Sum"],
+    "EBSWriteBytes": ["Sum"],
+    "StatusCheckFailed": ["Maximum"],
+    "StatusCheckFailed_Instance": ["Maximum"],
+    "StatusCheckFailed_System": ["Maximum"]
+  }
+}

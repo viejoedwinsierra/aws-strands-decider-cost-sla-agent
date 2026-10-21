@@ -24,6 +24,7 @@ set +a
 : "${AWS_REGION:?AWS_REGION is required}"
 : "${EXPERIMENT_ID:?EXPERIMENT_ID is required}"
 : "${PROJECT_TAG:?PROJECT_TAG is required}"
+: "${ENVIRONMENT:?ENVIRONMENT is required}"
 
 export AWS_PROFILE
 export AWS_REGION

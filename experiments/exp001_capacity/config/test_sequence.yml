@@ -15,28 +15,28 @@ scenarios:
     name: baseline
     users: 5
     spawn_rate: 1
-    duration: 60s
+    duration: 600s
 
   - id: LB-02
     name: incremental
     users: 10
     spawn_rate: 2
-    duration: 120s
+    duration: 600s
 
   - id: LB-03
     name: medium_load
     users: 20
     spawn_rate: 3
-    duration: 180s
+    duration: 600s
 
   - id: LB-04
     name: high_load
     users: 40
     spawn_rate: 5
-    duration: 180s
+    duration: 600s
 
   - id: LB-05
     name: stress
     users: 60
     spawn_rate: 10
-    duration: 300s
+    duration: 600s

@@ -31,29 +31,43 @@ if [[ ! -f "$TAGS_HELPER" ]]; then
   exit 1
 fi
 
+CREATE_BUCKET=false
+
 if [[ -n "$EXISTING_BUCKET" ]]; then
   echo "Checking configured bucket: $EXISTING_BUCKET"
 
-  if ! aws_cli s3api head-bucket \
-      --bucket "$EXISTING_BUCKET" \
-      --expected-bucket-owner "$ACCOUNT_ID" >/dev/null; then
-    echo "$EXPERIMENT_ID | ERROR: Cannot verify existing bucket." >&2
-    echo "$EXPERIMENT_ID | Automatic replacement is disabled." >&2
+  HEAD_STATUS="$(aws_cli s3api head-bucket \
+    --bucket "$EXISTING_BUCKET" \
+    --expected-bucket-owner "$ACCOUNT_ID" \
+    --query 'ResponseMetadata.HTTPStatusCode' \
+    --output text 2>&1)" && HEAD_EXIT=0 || HEAD_EXIT=$?
+
+  if [[ "$HEAD_EXIT" -eq 0 ]]; then
+    BUCKET="$EXISTING_BUCKET"
+    echo "$EXPERIMENT_ID | Validating bucket identity"
+
+    aws_cli s3api get-bucket-tagging \
+      --bucket "$BUCKET" \
+      --expected-bucket-owner "$ACCOUNT_ID" \
+      --output json |
+      python3 "$TAGS_HELPER" s3 check-identity \
+        --name "$BUCKET" --role "evidence-storage"
+
+    echo "Reusing verified bucket: $BUCKET"
+  elif [[ "$HEAD_STATUS" == *"(404)"* ]]; then
+    echo "$EXPERIMENT_ID | Configured bucket no longer exists."
+    echo "$EXPERIMENT_ID | Provisioning replacement bucket."
+    CREATE_BUCKET=true
+  else
+    echo "$EXPERIMENT_ID | ERROR: Cannot verify configured bucket." >&2
+    echo "$HEAD_STATUS" >&2
     exit 1
   fi
-
-  BUCKET="$EXISTING_BUCKET"
-  echo "$EXPERIMENT_ID | Validating bucket identity"
-
-  aws_cli s3api get-bucket-tagging \
-    --bucket "$BUCKET" \
-    --expected-bucket-owner "$ACCOUNT_ID" \
-    --output json |
-    python3 "$TAGS_HELPER" s3 check-identity \
-      --name "$BUCKET" --role "evidence-storage"
-
-  echo "Reusing verified bucket: $BUCKET"
 else
+  CREATE_BUCKET=true
+fi
+
+if [[ "$CREATE_BUCKET" == true ]]; then
   BUCKET="aws-cost-sla-evidence-${ACCOUNT_ID}-$(date +%s)"
   echo "Creating bucket: $BUCKET"
 
