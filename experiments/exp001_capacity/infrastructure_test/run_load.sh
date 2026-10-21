@@ -69,46 +69,7 @@ SOURCE_COMMIT="$(git -C "$SCRIPT_DIR" rev-parse HEAD 2>/dev/null || true)"
 export RUN_ID HTTP_IP USERS SPAWN_RATE DURATION
 export HTTP_INSTANCE_ID LOCUST_INSTANCE_ID AWS_REGION SOURCE_COMMIT
 
-python3 - "$LOCAL_DIR/run_manifest.json" <<'MANIFEST'
-import json
-import os
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-duration = os.environ["DURATION"]
-if not duration.endswith("s") or not duration[:-1].isdigit():
-    raise SystemExit("ERROR: DURATION must use seconds, e.g. 60s")
-
-manifest = {
-    "schema_version": "1.0",
-    "experiment_id": "EXP-001",
-    "run_id": os.environ["RUN_ID"],
-    "started_at_utc": datetime.now(timezone.utc).isoformat(),
-    "aws_region": os.environ["AWS_REGION"],
-    "infrastructure": {
-        "http_instance_id": os.environ["HTTP_INSTANCE_ID"],
-        "locust_instance_id": os.environ["LOCUST_INSTANCE_ID"],
-        "target_private_ip": os.environ["HTTP_IP"],
-        "target_port": 8080,
-    },
-    "configuration": {
-        "users": int(os.environ["USERS"]),
-        "spawn_rate_users_per_second": float(os.environ["SPAWN_RATE"]),
-        "configured_duration_seconds": int(duration[:-1]),
-    },
-    "source_commit": os.environ["SOURCE_COMMIT"] or None,
-    "load_generator": {
-        "tool": "Locust",
-        "version": "2.46.7",
-    },
-}
-
-Path(sys.argv[1]).write_text(
-    json.dumps(manifest, indent=2) + "\n",
-    encoding="utf-8",
-)
-MANIFEST
+python3 "$SCRIPT_DIR/python/generate_run_manifest.py" "$LOCAL_DIR/run_manifest.json"
 
 aws_cli s3 cp \
   "$LOCAL_DIR/run_manifest.json" \
@@ -120,43 +81,7 @@ echo "RUN_MANIFEST_UPLOADED"
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
 
-python3 - "$TMP" "$HTTP_IP" "$USERS" "$SPAWN_RATE" "$DURATION" "$RUN_ID" "$S3_PREFIX" <<'PY'
-import json
-import shlex
-import sys
-from pathlib import Path
-
-output, ip, users, spawn_rate, duration, run_id, s3_prefix = sys.argv[1:]
-
-remote_dir = f"/opt/exp001-locust/results/{run_id}"
-csv_prefix = f"{remote_dir}/exp001"
-
-command = " ".join(map(shlex.quote, [
-    "/opt/exp001-locust/venv311/bin/locust",
-    "-f", "/opt/exp001-locust/locustfile.py",
-    "--headless",
-    "--host", f"http://{ip}:8080",
-    "--users", users,
-    "--spawn-rate", spawn_rate,
-    "--run-time", duration,
-    "--csv", csv_prefix,
-    "--exit-code-on-error", "1",
-]))
-
-commands = [
-    "set -eu",
-    f"mkdir -p {shlex.quote(remote_dir)}",
-    "set +e",
-    command,
-    "LOCUST_EXIT_CODE=$?",
-    "set -e",
-    f"aws s3 sync {shlex.quote(remote_dir + '/')} {shlex.quote(s3_prefix + '/')} --sse AES256",
-    'echo "LOCUST_EXIT_CODE=$LOCUST_EXIT_CODE"',
-    'exit "$LOCUST_EXIT_CODE"',
-]
-
-Path(output).write_text(json.dumps({"commands": commands}))
-PY
+python3 "$SCRIPT_DIR/python/generate_ssm_command.py" "$TMP" "$HTTP_IP" "$USERS" "$SPAWN_RATE" "$DURATION" "$RUN_ID" "$S3_PREFIX"
 
 echo "EXP-001 | Load test"
 echo "Run ID: $RUN_ID"

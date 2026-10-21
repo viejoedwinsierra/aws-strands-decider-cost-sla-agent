@@ -58,22 +58,7 @@ python3 "$BASE_DIR/../shared/python/discover_instances.py" \
   --output "$INVENTORY_FILE"
 
 # Resolve mandatory roles without discarding other discovered instances.
-ROLE_IDS="$(python3 - "$INVENTORY_FILE" <<'ROLE_PY'
-import json
-import sys
-from pathlib import Path
-
-inventory = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-instances = inventory["instances"]
-
-for role in ("http-server", "load-generator"):
-    matches = [item["instance_id"] for item in instances if item.get("role") == role]
-    if len(matches) != 1:
-        raise SystemExit(
-            f"ERROR: Expected exactly one EC2 with Role={role}; found {len(matches)}"
-        )
-    print(matches[0])
-ROLE_PY
+ROLE_IDS="$(python3 "$BASE_DIR/infrastructure_test/python/resolve_instance_roles.py" "$INVENTORY_FILE"
 )"
 
 mapfile -t INSTANCE_IDS <<< "$ROLE_IDS"
@@ -99,41 +84,7 @@ aws --profile "$AWS_PROFILE" --region "$AWS_REGION" s3api head-object \
   --output json
 
 # Verify that the S3 object matches the local inventory byte for byte.
-python3 - "$INVENTORY_FILE" "$S3_RUN_PREFIX/ec2_inventory.json" "$AWS_PROFILE" "$AWS_REGION" <<'VERIFY_PY'
-import hashlib
-import subprocess
-import sys
-import tempfile
-from pathlib import Path
-
-local_path = Path(sys.argv[1])
-s3_uri = sys.argv[2]
-profile = sys.argv[3]
-region = sys.argv[4]
-
-with tempfile.TemporaryDirectory() as directory:
-    remote_path = Path(directory) / "ec2_inventory.json"
-
-    subprocess.run(
-        [
-            "aws", "s3", "cp",
-            s3_uri, str(remote_path),
-            "--profile", profile,
-            "--region", region,
-            "--no-progress",
-        ],
-        check=True,
-    )
-
-    local_hash = hashlib.sha256(local_path.read_bytes()).hexdigest()
-    remote_hash = hashlib.sha256(remote_path.read_bytes()).hexdigest()
-
-    if local_hash != remote_hash:
-        raise SystemExit("ERROR: S3 inventory SHA-256 mismatch")
-
-    print(f"EXP-001 | Inventory SHA-256: {local_hash}")
-    print("EXP-001 | S3 inventory integrity verified")
-VERIFY_PY
+python3 "$BASE_DIR/infrastructure_test/python/verify_s3_integrity.py" "$INVENTORY_FILE" "$S3_RUN_PREFIX/ec2_inventory.json" "$AWS_PROFILE" "$AWS_REGION"
 
 echo "EXP-001 | EC2 inventory published and verified in S3"
 
@@ -198,85 +149,16 @@ echo "EXP-001 | CloudWatch observation window: $START_TIME -> $END_TIME"
 TIMELINE_FILE="$BASE_DIR/results/$RUN_ID/experiment_timeline.json"
 mkdir -p "$(dirname "$TIMELINE_FILE")"
 
-python3 - "$TIMELINE_FILE" \
+python3 "$BASE_DIR/infrastructure_test/python/generate_timeline.py" "$TIMELINE_FILE" \
   "$EXPERIMENT_ID" "$RUN_ID" "$LOAD_STATUS" \
   "$PRE_START_TIME" "$PRE_END_TIME" \
   "$RUN_START_TIME" "$RUN_END_TIME" \
-  "$POST_START_TIME" "$POST_END_TIME" <<'TIMELINE_PY'
-import json
-import sys
-from datetime import datetime
-from pathlib import Path
-
-(
-    output, experiment, run_id, load_status,
-    pre_start, pre_end, run_start, run_end,
-    post_start, post_end,
-) = sys.argv[1:]
-
-def duration(start, end):
-    return (
-        datetime.fromisoformat(end.replace("Z", "+00:00"))
-        - datetime.fromisoformat(start.replace("Z", "+00:00"))
-    ).total_seconds()
-
-timeline = {
-    "schema_version": "1.0",
-    "experiment_id": experiment,
-    "run_id": run_id,
-    "load_exit_code": int(load_status),
-    "phases": {
-        "PRE": {
-            "start_utc": pre_start,
-            "end_utc": pre_end,
-            "duration_seconds": duration(pre_start, pre_end),
-        },
-        "RUN": {
-            "start_utc": run_start,
-            "end_utc": run_end,
-            "duration_seconds": duration(run_start, run_end),
-            "window_type": "operational",
-        },
-        "POST": {
-            "start_utc": post_start,
-            "end_utc": post_end,
-            "duration_seconds": duration(post_start, post_end),
-        },
-    },
-    "cloudwatch_window": {
-        "start_utc": pre_start,
-        "end_utc": post_end,
-        "duration_seconds": duration(pre_start, post_end),
-    },
-}
-
-Path(output).write_text(
-    json.dumps(timeline, indent=2) + "\n",
-    encoding="utf-8",
-)
-print(f"EXP-001 | Timeline saved: {output}")
-TIMELINE_PY
+  "$POST_START_TIME" "$POST_END_TIME"
 
 # CloudWatch collection runs only after PRE, RUN and POST have completed.
 # Use every EC2 instance from the frozen experiment inventory.
 CLOUDWATCH_INSTANCE_OUTPUT="$(
-  python3 - "$INVENTORY_FILE" <<'CW_INSTANCES_PY'
-import json
-import sys
-from pathlib import Path
-
-inventory = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-instance_ids = [item["instance_id"] for item in inventory["instances"]]
-
-if not instance_ids:
-    raise SystemExit("ERROR: No EC2 instances available for CloudWatch")
-
-if len(instance_ids) != len(set(instance_ids)):
-    raise SystemExit("ERROR: Duplicate EC2 instance IDs in inventory")
-
-for instance_id in instance_ids:
-    print(instance_id)
-CW_INSTANCES_PY
+  python3 "$BASE_DIR/infrastructure_test/python/list_cloudwatch_instances.py" "$INVENTORY_FILE"
 )" || {
   echo "ERROR: CloudWatch instance discovery failed" >&2
   exit 1
