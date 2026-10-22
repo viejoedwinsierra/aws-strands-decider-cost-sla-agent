@@ -11,6 +11,8 @@ if role == 'http-server':
     values['HTTP_INSTANCE_ID'] = instance_id
 elif role == 'load-generator':
     values['LOCUST_INSTANCE_ID'] = instance_id
+elif role == 'decider-2b':
+    values['DECIDER_INSTANCE_ID'] = instance_id
 else:
     raise SystemExit(f'Rol no soportado: {role}')
 lines = p.read_text().splitlines() if p.exists() else []

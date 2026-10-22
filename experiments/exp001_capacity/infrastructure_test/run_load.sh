@@ -101,6 +101,9 @@ echo "SSM Command ID: $COMMAND_ID"
 
 # El waiter estándar de SSM puede terminar antes que una prueba de 60 s.
 # Consultamos el estado hasta que la ejecución finalice.
+SSM_POLL_TIMEOUT=1
+STATUS="Unknown"
+
 for attempt in $(seq 1 120); do
   STATUS="$(aws_cli ssm get-command-invocation \
     --command-id "$COMMAND_ID" \
@@ -109,21 +112,80 @@ for attempt in $(seq 1 120); do
     --output text 2>/dev/null || true)"
 
   case "$STATUS" in
-    Success) break ;;
-    Failed|Cancelled|TimedOut|Cancelling)
-      echo "ERROR: Load test ended with status $STATUS" >&2
+    Success|Failed|Cancelled|TimedOut)
+      SSM_POLL_TIMEOUT=0
       break
       ;;
   esac
 
-  sleep 5
+  if (( attempt < 120 )); then
+    sleep 5
+  fi
 done
 
-aws_cli ssm get-command-invocation \
+if (( SSM_POLL_TIMEOUT != 0 )); then
+  echo "ERROR: SSM polling timeout after 120 attempts" >&2
+  echo "Last observed SSM status: $STATUS" >&2
+fi
+
+mkdir -p "$LOCAL_DIR/diagnostics"
+
+# Store raw SSM diagnostics on the native WSL filesystem.
+PRIVATE_ROOT="${HOME}/.local/share/aws-cost-sla-agent/exp001"
+PRIVATE_DIR="${PRIVATE_ROOT}/${RUN_ID}"
+
+# Restrict access to all agent-specific storage directories.
+(umask 077; mkdir -p "$PRIVATE_DIR")
+chmod 700   "${HOME}/.local/share/aws-cost-sla-agent"   "$PRIVATE_ROOT"   "$PRIVATE_DIR"
+
+SSM_DIAGNOSTIC="$PRIVATE_DIR/ssm_locust_execution_original.json"
+
+# Create the raw diagnostic with restrictive permissions.
+rm -f -- "$SSM_DIAGNOSTIC"
+(umask 077; : > "$SSM_DIAGNOSTIC")
+chmod 600 "$SSM_DIAGNOSTIC"
+
+SSM_DIAGNOSTIC_STATUS=0
+if ! aws_cli ssm get-command-invocation \
   --command-id "$COMMAND_ID" \
   --instance-id "$LOCUST_INSTANCE_ID" \
-  --query '{Status:Status,Output:StandardOutputContent,Errors:StandardErrorContent}' \
-  --output json
+  --query '{Status:Status,ResponseCode:ResponseCode,Output:StandardOutputContent,Errors:StandardErrorContent}' \
+  --output json > "$SSM_DIAGNOSTIC"; then
+  SSM_DIAGNOSTIC_STATUS=1
+  echo "ERROR: Unable to retrieve SSM diagnostic" >&2
+fi
+
+# Validate the diagnostic structure before publishing to S3.
+if [[ "$SSM_DIAGNOSTIC_STATUS" -eq 0 ]]; then
+  python3 "$SCRIPT_DIR/python/validate_ssm_diagnostic.py" \
+    "$SSM_DIAGNOSTIC" --mode structure || SSM_DIAGNOSTIC_STATUS=$?
+fi
+
+SSM_SANITIZED="$LOCAL_DIR/diagnostics/ssm_locust_execution_sanitized.json"
+
+SSM_SANITIZE_STATUS=1
+if [[ "$SSM_DIAGNOSTIC_STATUS" -eq 0 ]]; then
+  SSM_SANITIZE_STATUS=0
+  python3 "$SCRIPT_DIR/python/sanitize_ssm_diagnostic.py" \
+    "$SSM_DIAGNOSTIC" \
+    "$SSM_SANITIZED" || SSM_SANITIZE_STATUS=$?
+fi
+
+SSM_UPLOAD_STATUS=1
+if (( SSM_DIAGNOSTIC_STATUS == 0 && SSM_SANITIZE_STATUS == 0 )); then
+  SSM_UPLOAD_STATUS=0
+  aws_cli s3 cp \
+    "$SSM_SANITIZED" \
+    "$S3_PREFIX/diagnostics/ssm_locust_execution.json" \
+    --sse AES256 --no-progress || SSM_UPLOAD_STATUS=$?
+fi
+
+echo "EXP-001 | Locust SSM status: $STATUS"
+echo "EXP-001 | SSM diagnostic: $SSM_DIAGNOSTIC"
+
+if [[ "$SSM_UPLOAD_STATUS" -ne 0 ]]; then
+  echo "ERROR: SSM diagnostic upload failed" >&2
+fi
 
 # Preserve local evidence even when Locust or SSM reports failure.
 mkdir -p "$LOCAL_DIR"
@@ -141,8 +203,38 @@ else
 fi
 rm -rf "$DOWNLOAD_DIR"
 
+# Evaluate the remote execution without interrupting evidence recovery.
+SSM_EXECUTION_STATUS=0
+if [[ "$SSM_DIAGNOSTIC_STATUS" -eq 0 ]]; then
+  python3 "$SCRIPT_DIR/python/validate_ssm_diagnostic.py" \
+    "$SSM_DIAGNOSTIC" --mode execution || SSM_EXECUTION_STATUS=$?
+else
+  SSM_EXECUTION_STATUS=1
+fi
+
+if (( SSM_POLL_TIMEOUT != 0 )); then
+  echo "ERROR: SSM supervision timed out" >&2
+  echo "Last observed status: $STATUS" >&2
+  echo "Diagnostic: $SSM_DIAGNOSTIC" >&2
+  exit 1
+fi
+
 if [[ "$STATUS" != "Success" ]]; then
   echo "ERROR: Load test status: $STATUS" >&2
+  exit 1
+fi
+
+if (( SSM_DIAGNOSTIC_STATUS != 0 ||
+      SSM_SANITIZE_STATUS != 0 ||
+      SSM_UPLOAD_STATUS != 0 )); then
+  echo "ERROR: SSM diagnostic incomplete" >&2
+  echo "Retrieval=$SSM_DIAGNOSTIC_STATUS Sanitize=$SSM_SANITIZE_STATUS Upload=$SSM_UPLOAD_STATUS" >&2
+  exit 1
+fi
+
+if (( SSM_EXECUTION_STATUS != 0 )); then
+  echo "ERROR: SSM remote execution validation failed" >&2
+  echo "Diagnostic: $SSM_DIAGNOSTIC" >&2
   exit 1
 fi
 

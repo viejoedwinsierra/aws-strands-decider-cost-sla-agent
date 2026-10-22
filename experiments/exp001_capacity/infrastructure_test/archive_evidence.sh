@@ -35,6 +35,7 @@ aws --profile "$AWS_PROFILE" --region "$AWS_REGION" \
   --include "ec2_inventory.json" \
   --include "experiment_timeline.json" \
   --include "cloudwatch/*.json" \
+  --include "diagnostics/ssm_locust_execution.json" \
   --no-progress
 
 # Copy only evidence actually retrieved from S3.
@@ -48,6 +49,7 @@ evidence_files=(
   "$TMP_DIR"/ec2_inventory.json
   "$TMP_DIR"/experiment_timeline.json
   "$TMP_DIR"/cloudwatch/*.json
+  "$TMP_DIR"/diagnostics/ssm_locust_execution.json
 )
 
 if (( ${#evidence_files[@]} == 0 )); then
@@ -86,6 +88,7 @@ done
 
 # Remove stale CloudWatch evidence before restoring S3 snapshot.
 rm -rf -- "$RESULTS_DIR/cloudwatch"
+rm -f -- "$RESULTS_DIR/diagnostics/ssm_locust_execution.json"
 
 RECOVERED_COUNT=0
 for file in "${evidence_files[@]}"; do
@@ -99,96 +102,7 @@ done
 
 echo "Evidence files recovered: $RECOVERED_COUNT"
 
-python3 - "$RESULTS_DIR" "$RUN_ID" "${REQUIRE_CLOUDWATCH_EVIDENCE:-0}" <<'PY'
-import hashlib
-import json
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-directory = Path(sys.argv[1])
-run_id = sys.argv[2]
-require_cloudwatch = sys.argv[3] == "1"
-
-expected = [
-    "exp001_stats.csv",
-    "exp001_stats_history.csv",
-    "exp001_failures.csv",
-    "exp001_exceptions.csv",
-    "metrics_normalized.json",
-    "sla_evaluation.json",
-]
-
-# New runs include a reproducible execution manifest.
-if (directory / "run_manifest.json").is_file():
-    expected.append("run_manifest.json")
-
-# Include the EC2 inventory when available.
-# Historical runs may not contain this artifact.
-inventory_path = directory / "ec2_inventory.json"
-if inventory_path.is_file():
-    expected.append("ec2_inventory.json")
-
-# Include the experiment timeline.
-timeline_path = directory / "experiment_timeline.json"
-if timeline_path.is_file() or require_cloudwatch:
-    expected.append("experiment_timeline.json")
-
-# Derive CloudWatch evidence from the frozen EC2 inventory.
-if inventory_path.is_file():
-    inventory = json.loads(inventory_path.read_text(encoding="utf-8"))
-    instance_ids = [item["instance_id"] for item in inventory["instances"]]
-
-    if require_cloudwatch and not instance_ids:
-        raise SystemExit("ERROR: Empty EC2 inventory for CloudWatch")
-
-    if len(instance_ids) != len(set(instance_ids)):
-        raise SystemExit("ERROR: Duplicate EC2 instance IDs")
-
-    for instance_id in instance_ids:
-        name = f"cloudwatch/{instance_id}.json"
-        if require_cloudwatch or (directory / name).is_file():
-            expected.append(name)
-
-elif require_cloudwatch:
-    raise SystemExit("ERROR: EC2 inventory required for CloudWatch")
-
-files = {}
-missing = []
-
-for name in expected:
-    path = directory / name
-    if not path.is_file():
-        missing.append(name)
-        continue
-
-    content = path.read_bytes()
-    files[name] = {
-        "size_bytes": len(content),
-        "sha256": hashlib.sha256(content).hexdigest(),
-    }
-
-if not files:
-    raise SystemExit("ERROR: No evidence files available")
-
-archive_status = "COMPLETE" if not missing else "PARTIAL"
-
-manifest = {
-    "schema_version": "1.0",
-    "experiment_id": "EXP-001",
-    "run_id": run_id,
-    "archived_at_utc": datetime.now(timezone.utc).isoformat(),
-    "archive_status": archive_status,
-    "missing_files": missing,
-    "files": files,
-}
-
-(directory / "evidence_manifest.json").write_text(
-    json.dumps(manifest, indent=2) + "\n",
-    encoding="utf-8",
-)
-print(f"Manifest generated: {len(files)} files")
-PY
+python3 "$SCRIPT_DIR/python/archive_evidence.py" generate "$RESULTS_DIR" "$RUN_ID" "${REQUIRE_CLOUDWATCH_EVIDENCE:-0}"
 
 aws --profile "$AWS_PROFILE" --region "$AWS_REGION" \
   s3 cp "$RESULTS_DIR/evidence_manifest.json" \
@@ -203,81 +117,13 @@ aws --profile "$AWS_PROFILE" --region "$AWS_REGION" \
   s3 cp "$S3_PREFIX/evidence_manifest.json" \
   "$TMP_MANIFEST" --no-progress
 
-python3 - "$RESULTS_DIR" "$TMP_MANIFEST" <<'PY'
-import hashlib
-import json
-import sys
-from pathlib import Path
-
-directory = Path(sys.argv[1])
-remote_manifest = Path(sys.argv[2]).read_bytes()
-local_manifest = (directory / "evidence_manifest.json").read_bytes()
-
-if remote_manifest != local_manifest:
-    raise SystemExit("ERROR: S3 manifest differs from local manifest")
-
-manifest = json.loads(remote_manifest)
-for name, metadata in manifest["files"].items():
-    content = (directory / name).read_bytes()
-    digest = hashlib.sha256(content).hexdigest()
-    if digest != metadata["sha256"]:
-        raise SystemExit(f"ERROR: SHA-256 mismatch: {name}")
-    if len(content) != metadata["size_bytes"]:
-        raise SystemExit(f"ERROR: Size mismatch: {name}")
-
-print("ARCHIVE_VERIFICATION_PASSED")
-print(f"Verified files: {len(manifest['files'])}")
-PY
+python3 "$SCRIPT_DIR/python/archive_evidence.py" verify-local "$RESULTS_DIR" "$TMP_MANIFEST"
 
 # Independently verify each archived object against S3.
-python3 - "$RESULTS_DIR/evidence_manifest.json" "$S3_PREFIX" "$AWS_PROFILE" "$AWS_REGION" <<'VERIFY_REMOTE'
-import hashlib
-import json
-import subprocess
-import sys
-
-manifest_path, prefix, profile, region = sys.argv[1:]
-with open(manifest_path, encoding="utf-8") as file:
-    manifest = json.load(file)
-
-for name, metadata in manifest["files"].items():
-    command = [
-        "aws", "--profile", profile, "--region", region,
-        "s3", "cp",
-        prefix + "/" + name,
-        "-",
-        "--no-progress",
-    ]
-    result = subprocess.run(command, capture_output=True, check=True)
-    actual = hashlib.sha256(result.stdout).hexdigest()
-    if actual != metadata["sha256"]:
-        raise SystemExit(f"ERROR: Remote SHA-256 mismatch: {name}")
-    if len(result.stdout) != metadata["size_bytes"]:
-        raise SystemExit(f"ERROR: Remote size mismatch: {name}")
-
-print(f"S3_REMOTE_INTEGRITY_PASSED: {len(manifest['files'])} files")
-VERIFY_REMOTE
+python3 "$SCRIPT_DIR/python/archive_evidence.py" verify-remote "$RESULTS_DIR/evidence_manifest.json" "$S3_PREFIX" "$AWS_PROFILE" "$AWS_REGION"
 
 # Integrity alone does not guarantee evidence completeness.
-python3 - "$RESULTS_DIR/evidence_manifest.json" <<'CHECK_COMPLETENESS'
-import json
-import sys
-from pathlib import Path
-
-manifest = json.loads(Path(sys.argv[1]).read_text(encoding="utf-8"))
-status = manifest.get("archive_status")
-missing = manifest.get("missing_files", [])
-
-if status != "COMPLETE" or missing:
-    print(
-        f"ERROR: Incomplete evidence archive: "
-        f"status={status}, missing={missing}",
-        file=sys.stderr,
-    )
-    raise SystemExit(1)
-
-print("EVIDENCE_COMPLETENESS_PASSED")
-CHECK_COMPLETENESS
+python3 "$SCRIPT_DIR/python/archive_evidence.py" check-completeness "$RESULTS_DIR/evidence_manifest.json"
 
 echo "S3 archive: $S3_PREFIX/"
 echo "Local backup: $RESULTS_DIR"
