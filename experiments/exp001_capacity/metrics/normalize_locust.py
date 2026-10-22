@@ -12,9 +12,9 @@ def main():
         description="Normalize Locust metrics for EXP-001"
     )
     parser.add_argument("--run-id", required=True)
-    parser.add_argument("--users", type=int, default=5)
-    parser.add_argument("--spawn-rate", type=float, default=1)
-    parser.add_argument("--duration", type=int, default=60)
+    parser.add_argument("--users", type=int, default=None)
+    parser.add_argument("--spawn-rate", type=float, default=None)
+    parser.add_argument("--duration", type=int, default=None)
     parser.add_argument("--target-ip", default=None)
     args = parser.parse_args()
 
@@ -24,6 +24,31 @@ def main():
         parser.error("Invalid run-id")
 
     results = BASE / "results" / args.run_id
+    manifest_path = results / "run_manifest.json"
+    if not manifest_path.is_file():
+        parser.error(f"Required run manifest missing: {manifest_path}")
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    if manifest.get("run_id") != args.run_id or manifest.get("experiment_id") != "EXP-001":
+        parser.error("Manifest run_id/experiment_id mismatch")
+    config = manifest.get("configuration", {})
+    try:
+        users = int(config["users"])
+        spawn_rate = float(config["spawn_rate_users_per_second"])
+        duration = int(config["configured_duration_seconds"])
+        target_ip = manifest["infrastructure"]["target_private_ip"]
+    except (KeyError, ValueError, TypeError) as exc:
+        parser.error(f"Invalid manifest configuration: {exc}")
+    if users <= 0 or spawn_rate <= 0 or duration <= 0:
+        parser.error("Manifest requires positive users, spawn_rate and duration")
+    if args.users is not None and args.users != users:
+        parser.error("--users disagrees with run_manifest.json")
+    if args.spawn_rate is not None and abs(args.spawn_rate - spawn_rate) > 1e-9:
+        parser.error("--spawn-rate disagrees with run_manifest.json")
+    if args.duration is not None and args.duration != duration:
+        parser.error("--duration disagrees with run_manifest.json")
+    if args.target_ip is not None and args.target_ip != target_ip:
+        parser.error("--target-ip disagrees with run_manifest.json")
+
     source = results / "exp001_stats.csv"
     output = results / "metrics_normalized.json"
 
@@ -58,13 +83,13 @@ def main():
             "load_generator": "EC2",
             "target": "EC2",
             "network": "AWS VPC private",
-            "target_private_ip": args.target_ip,
+            "target_private_ip": target_ip,
             "target_port": 8080,
         },
         "configuration": {
-            "users": args.users,
-            "spawn_rate_users_per_second": args.spawn_rate,
-            "configured_duration_seconds": args.duration,
+            "users": users,
+            "spawn_rate_users_per_second": spawn_rate,
+            "configured_duration_seconds": duration,
         },
         "observations": {
             "request_count": requests,

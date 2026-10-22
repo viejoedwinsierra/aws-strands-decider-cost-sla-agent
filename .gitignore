@@ -254,3 +254,12 @@ experiments/**/outputs/
 # Preserve directory placeholders
 !experiments/**/results/.gitkeep
 !experiments/**/evidence/.gitkeep
+
+# EXP-001 temporary development artifacts
+/.venv-decider/
+/.phase_c_v2_backup/
+/phase_c_v2/
+/exp001_recovery_patch/
+/exp001_recovery_patch.zip
+/tests/exp001_recovery_patch.zip
+*.pre_recovery_backup

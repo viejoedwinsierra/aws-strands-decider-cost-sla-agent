@@ -46,12 +46,8 @@ HTTP_PRIVATE_IP="$(
   exit 1
 }
 
-python3 "$BASE_DIR/metrics/normalize_locust.py" \
-  --run-id "$RUN_ID" \
-  --users "${USERS:-5}" \
-  --spawn-rate "${SPAWN_RATE:-1}" \
-  --duration "${DURATION_SECONDS:-60}" \
-  --target-ip "$HTTP_PRIVATE_IP"
+# Manifest is the authoritative record of the executed scenario.
+python3 "$BASE_DIR/metrics/normalize_locust.py" --run-id "$RUN_ID"
 
 python3 "$BASE_DIR/metrics/evaluate_sla.py" \
   --run-id "$RUN_ID"

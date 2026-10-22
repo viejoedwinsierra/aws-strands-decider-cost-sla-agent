@@ -206,19 +206,41 @@ def main():
             record["started_at_utc"] = utc_now()
             save_summary(summary_path, summary)
 
-            result = subprocess.run(["bash", str(RUN_SCRIPT)], env=env)
-            # Normalize and publish individual Locust/SLA evidence before next case.
-            # CloudWatch is intentionally deferred to a later campaign-level phase.
-            if result.returncode == 0:
-                result = subprocess.run(
-                    ["bash", str(ANALYZE_SCRIPT), run_id], env=env
-                )
-            if result.returncode == 0:
-                result = subprocess.run(
-                    ["bash", str(ARCHIVE_SCRIPT), run_id], env=env
-                )
+            # Preserve load errors while analyzing any successfully collected CSV.
+            load_result = subprocess.run(["bash", str(RUN_SCRIPT)], env=env)
+            load_exit_code = load_result.returncode
+            record["load_exit_code"] = load_exit_code
 
-            record["exit_code"] = result.returncode
+            stats_path = BASE_DIR / "results" / run_id / "exp001_stats.csv"
+            manifest_path = BASE_DIR / "results" / run_id / "run_manifest.json"
+            analysis_exit_code = None
+            archive_exit_code = None
+            if stats_path.is_file() and stats_path.stat().st_size > 0 and manifest_path.is_file():
+                analysis_exit_code = subprocess.run(
+                    ["bash", str(ANALYZE_SCRIPT), run_id], env=env
+                ).returncode
+                if analysis_exit_code:
+                    print(f"ANALYSIS_FAILED: {run_id} exit={analysis_exit_code}", flush=True)
+            else:
+                print(f"ANALYSIS_SKIPPED_MISSING_EVIDENCE: {run_id}", flush=True)
+
+            # Preserve the original failure while attempting mandatory S3 archival.
+            if manifest_path.is_file():
+                archive_exit_code = subprocess.run(
+                    ["bash", str(ARCHIVE_SCRIPT), run_id], env=env
+                ).returncode
+                if archive_exit_code:
+                    print(f"ARCHIVE_FAILED: {run_id} exit={archive_exit_code}", flush=True)
+
+            record["analysis_exit_code"] = analysis_exit_code
+            record["archive_exit_code"] = archive_exit_code
+            record["exit_code"] = (
+                load_exit_code if load_exit_code != 0
+                else analysis_exit_code if analysis_exit_code not in (None, 0)
+                else archive_exit_code if archive_exit_code not in (None, 0)
+                else 0 if analysis_exit_code == 0 and archive_exit_code == 0
+                else 1
+            )
             record["finished_at_utc"] = utc_now()
 
             sla_path = BASE_DIR / "results" / run_id / "sla_evaluation.json"
@@ -272,7 +294,7 @@ def main():
 
             # Keep technical execution separate from evidence validation.
             record["execution_status"] = (
-                "COMPLETED" if result.returncode == 0 else "FAILED"
+                "COMPLETED" if load_exit_code == 0 else "FAILED"
             )
 
             valid_sla = record["sla_status"] in (
@@ -288,7 +310,7 @@ def main():
 
             record["status"] = (
                 "COMPLETED"
-                if result.returncode == 0 and valid_sla and valid_evidence
+                if record["exit_code"] == 0 and valid_sla and valid_evidence
                 else "FAILED"
             )
 
