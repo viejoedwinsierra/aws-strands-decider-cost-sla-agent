@@ -10,6 +10,7 @@ from pathlib import Path
 
 from src.analysis.telemetry import summarize_run
 from src.analysis.computational_cost import calculate as calculate_computational_cost
+from src.analysis.efficiency import calculate as calculate_efficiency
 from src.decider.evidence_adapter import build_state
 from src.decider.decision_guardrail import evaluate
 from src.decider.telemetry_context import prepare_evidence, format_context
@@ -100,6 +101,10 @@ def build_records(root, capacity_inventory=None):
             computational_cost = calculate_computational_cost(
                 {**base_record, "telemetry_contract": contract}, capacity_inventory
             )
+            manifest_path = directory / "run_manifest.json"
+            manifest = read_json(manifest_path) if manifest_path.is_file() else {}
+            http_id = manifest.get("infrastructure", {}).get("http_instance_id")
+            efficiency = calculate_efficiency(observations, computational_cost, http_id)
             # Append current scenario only after obtaining its measurements;
             # previous prefixes never include later scenarios.
             history.append({
@@ -115,6 +120,8 @@ def build_records(root, capacity_inventory=None):
                 format_context(contract, history)
                 + ". Computational resource consumption (estimated, not billing): "
                 + json.dumps(computational_cost, sort_keys=True)
+                + ". HTTP service efficiency (not monetary): "
+                + json.dumps(efficiency, sort_keys=True)
             ))
             # Campaign-wide final status is metadata, not information available
             # to an earlier decision. Do not append it to model state.
@@ -138,6 +145,7 @@ def build_records(root, capacity_inventory=None):
                 "telemetry": telemetry,
                 "telemetry_contract": contract,
                 "computational_cost": computational_cost,
+                "efficiency": efficiency,
                 "additional_metrics": additional_metrics,
                 "historical_context": list(history),
                 "state": state,
@@ -159,7 +167,9 @@ def infer(record):
         "experiment_id": record["experiment_id"],
         "run_id": record["run_id"],
         "additional_metrics": record["additional_metrics"],
-    })
+        "efficiency": record.get("efficiency", {}),
+        "sla_status": record.get("sla_status"),
+    }, policy="computational-v1" if record.get("decision_policy") == "computational-v1" else "legacy")
     return {"model": raw, "guardrail": guarded}
 
 
@@ -169,6 +179,8 @@ def execute(args):
     if getattr(args, "capacity_inventory", None):
         capacity_inventory = read_json(Path(args.capacity_inventory))
     records = build_records(root, capacity_inventory)
+    for record in records:
+        record["decision_policy"] = getattr(args, "decision_policy", "legacy")
 
     if not records:
         raise ValueError("No valid historical records")
@@ -220,6 +232,7 @@ def main():
     parser.add_argument("--output",
                         default=".infravita/reports/official_v21.json")
     parser.add_argument("--infer", action="store_true")
+    parser.add_argument("--decision-policy", choices=("legacy", "computational-v1"), default="legacy")
     parser.add_argument("--capacity-inventory", help="Optional JSON mapping instance IDs to vcpu and memory_gib")
     execute(parser.parse_args())
 

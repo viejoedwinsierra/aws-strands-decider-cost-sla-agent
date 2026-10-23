@@ -20,7 +20,7 @@ REQUIRED_METRICS = (
 )
 
 
-def evaluate(decision: dict, evidence: dict) -> dict:
+def evaluate(decision: dict, evidence: dict, policy="legacy") -> dict:
     answer = decision["answers"]["choice_0"]
     model_choice = answer["choice"]
 
@@ -38,12 +38,30 @@ def evaluate(decision: dict, evidence: dict) -> dict:
 
     additional_metrics = evidence.get("additional_metrics", {})
 
-    missing = [
-        metric
-        for metric in REQUIRED_METRICS
-        if additional_metrics.get(metric) is None
-    ]
-
+    if policy == "legacy":
+        required = REQUIRED_METRICS
+    elif policy == "computational-v1":
+        required = ("cpu_utilization", "memory_utilization")
+    else:
+        raise ValueError(f"Unsupported guardrail policy: {policy}")
+    missing = [metric for metric in required if additional_metrics.get(metric) is None]
+    if policy == "computational-v1":
+        efficiency = evidence.get("efficiency", {})
+        sla_status = evidence.get("sla_status")
+        if model_choice == "Optimize":
+            if sla_status != "PASS":
+                missing.append("sla_pass_required_for_optimize")
+            if efficiency.get("cpu_vcpu_seconds_per_successful_request_estimated") is None:
+                missing.append("cpu_efficiency")
+            # No baseline/alternative capacity or credit behavior means a
+            # resize recommendation is unsafe, even with low mean CPU.
+            missing.append("validated_optimization_alternative")
+        elif model_choice == "Scale Up":
+            if sla_status not in ("FAIL", "FAILED", "BREACH"):
+                missing.append("sla_degradation_for_scale_up")
+            missing.append("validated_capacity_bottleneck")
+        elif model_choice == "Maintain" and sla_status != "PASS":
+            missing.append("sla_pass_required_for_maintain")
     guardrail_applied = bool(missing)
 
     effective_choice = (
@@ -62,7 +80,7 @@ def evaluate(decision: dict, evidence: dict) -> dict:
         "guardrail_applied": guardrail_applied,
         "decision_overridden": effective_choice != model_choice,
         "missing_evidence": missing,
-        "policy_version": "experimental-v0.2",
+        "policy_version": "experimental-v0.2" if policy == "legacy" else "computational-v1",
     }
 
 
