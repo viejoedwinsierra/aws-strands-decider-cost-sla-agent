@@ -140,6 +140,7 @@ prepare_wheels locust \
 
 prepare_wheels fastapi \
   'fastapi==0.115.6' \
-  'uvicorn==0.34.0'
+  'uvicorn==0.34.0' \
+  'psycopg[binary]==3.2.6'
 
 echo "EXP-002 | Dependency preparation completed."

@@ -1,0 +1,24 @@
+schema_version: '1.0'
+experiment_id: EXP-002
+execution:
+  mode: sequential
+  stop_on_failure: true
+  cooldown_seconds: 15
+defaults:
+  target: private_ec2
+scenarios:
+  - id: DB-01
+    name: baseline
+    users: 5
+    spawn_rate: 1
+    duration: 60s
+  - id: DB-02
+    name: moderate
+    users: 15
+    spawn_rate: 3
+    duration: 60s
+  - id: DB-03
+    name: pressure
+    users: 30
+    spawn_rate: 5
+    duration: 60s

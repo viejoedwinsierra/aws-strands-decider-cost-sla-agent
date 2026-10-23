@@ -30,31 +30,10 @@ if [[ -n "$EXISTING_BUCKET" ]]; then
     BUCKET="$EXISTING_BUCKET"
     echo "Reusing bucket: $BUCKET"
   else
-    echo "Previous bucket unavailable: $EXISTING_BUCKET"
-    echo "Preserving historical reference and creating a new bucket."
-
-    HISTORY_FILE="${SCRIPT_DIR}/../config/evidence_bucket_history.json"
-
-    HISTORY_FILE="$HISTORY_FILE" OLD_BUCKET="$EXISTING_BUCKET" python3 - <<'PYHISTORY'
-import json
-import os
-from datetime import datetime, timezone
-from pathlib import Path
-
-p = Path(os.environ["HISTORY_FILE"])
-history = json.loads(p.read_text()) if p.exists() else []
-history.append({
-    "bucket": os.environ["OLD_BUCKET"],
-    "replaced_at_utc": datetime.now(timezone.utc).isoformat(),
-    "reason": "Bucket inaccessible during AWS Academy recovery"
-})
-p.parent.mkdir(parents=True, exist_ok=True)
-p.write_text(json.dumps(history, indent=2) + "\n")
-PYHISTORY
-
-    BUCKET="aws-cost-sla-evidence-${ACCOUNT_ID}-$(date +%s)"
-    echo "Creating bucket: $BUCKET"
-    aws_cli s3api create-bucket --bucket "$BUCKET" --region "$AWS_REGION"
+    echo "ERROR: Configured evidence bucket $EXISTING_BUCKET cannot be accessed." >&2
+    echo 'Refusing to create a replacement: head-bucket failure can mean AccessDenied or expired credentials.' >&2
+    echo 'Resolve access or explicitly update experiment.env after confirming the bucket is gone.' >&2
+    exit 1
   fi
 else
   BUCKET="aws-cost-sla-evidence-${ACCOUNT_ID}-$(date +%s)"

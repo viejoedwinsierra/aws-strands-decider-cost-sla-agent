@@ -101,10 +101,11 @@ printf '%s\\n' '{bundle_hash}' > "$VENV_DIR/.install-complete"
 cat > "/etc/systemd/system/$UNIT" <<SERVICE
 [Unit]
 Description=EXP-002 FastAPI workload
-After=network.target
+After=network.target postgresql.service\nRequires=postgresql.service
 
 [Service]
 Type=simple
+User=exp002_api
 WorkingDirectory=$APP_DIR
 ExecStart=$VENV_DIR/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8001 --workers 1
 Restart=on-failure
@@ -131,7 +132,7 @@ for attempt in range(30):
         ) as response:
             result = json.load(response)
 
-        assert result == {{"status": "ok", "mode": "standalone"}}, result
+        assert result == {{"status": "ok", "mode": "postgresql"}}, result
         print("HEALTH_OK=" + json.dumps(result))
         break
     except Exception:
@@ -140,6 +141,7 @@ for attempt in range(30):
         time.sleep(1)
 HEALTH
 
+curl --fail --silent --show-error http://127.0.0.1:8001/ready > "$EVIDENCE_DIR/readiness.json"
 systemctl is-active "$UNIT" > "$EVIDENCE_DIR/systemd_status.txt"
 ss -ltn > "$EVIDENCE_DIR/listening_ports.txt"
 

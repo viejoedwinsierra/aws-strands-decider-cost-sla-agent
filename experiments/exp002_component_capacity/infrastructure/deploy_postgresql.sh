@@ -27,6 +27,17 @@ if ! rpm -q postgresql15-server >/dev/null 2>&1; then dnf install -y postgresql1
 if [ ! -f /var/lib/pgsql/data/PG_VERSION ]; then postgresql-setup --initdb; fi
 systemctl enable --now postgresql
 runuser -u postgres -- psql -X -At -c 'SELECT 1' | grep -qx 1
+# Local Unix-socket peer authentication, no database TCP ingress or secrets.
+id -u exp002_api >/dev/null 2>&1 || useradd --system --no-create-home --shell /sbin/nologin exp002_api
+if ! runuser -u postgres -- psql -X -At -c "SELECT 1 FROM pg_roles WHERE rolname='exp002_api'" | grep -qx 1; then
+  runuser -u postgres -- createuser exp002_api
+fi
+if ! runuser -u postgres -- psql -X -At -c "SELECT 1 FROM pg_database WHERE datname='exp002'" | grep -qx 1; then
+  runuser -u postgres -- createdb --owner=exp002_api exp002
+fi
+runuser -u exp002_api -- psql -X -v ON_ERROR_STOP=1 -d exp002 -c 'CREATE TABLE IF NOT EXISTS events (id BIGSERIAL PRIMARY KEY, payload VARCHAR(256) NOT NULL, created_at TIMESTAMPTZ NOT NULL DEFAULT now())'
+runuser -u exp002_api -- psql -X -At -d exp002 -c 'SELECT 1' | grep -qx 1
+
 runuser -u postgres -- psql -X -At -c 'SHOW server_version' > "$E/postgresql/version.txt"
 runuser -u postgres -- psql -X -P pager=off -c 'SELECT now(),datname,numbackends,xact_commit,xact_rollback,blks_read,blks_hit FROM pg_stat_database' > "$E/postgresql/database_statistics.txt"
 runuser -u postgres -- psql -X -P pager=off -c 'SELECT now(),state,count(*) FROM pg_stat_activity GROUP BY state' > "$E/postgresql/connections.txt"

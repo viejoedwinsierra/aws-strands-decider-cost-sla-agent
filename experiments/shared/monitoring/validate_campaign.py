@@ -27,9 +27,11 @@ def main():
     p = argparse.ArgumentParser()
     for name in ('campaign-id', 'campaign-dir', 'bucket', 'profile', 'region', 'pre-start', 'pre-end', 'post-start', 'post-end', 'http-id', 'locust-id'):
         p.add_argument('--' + name, required=True)
+    p.add_argument('--experiment', choices=['EXP-001','EXP-002'], default='EXP-001')
     a = p.parse_args()
     root = Path(a.campaign_dir)
-    prefix = f'experiments/exp001_capacity/results/campaigns/{a.campaign_id}/'
+    folder = 'exp001_capacity' if a.experiment == 'EXP-001' else 'exp002_component_capacity'
+    prefix = f'experiments/{folder}/results/campaigns/{a.campaign_id}/'
     phases = {'PRE': (parse_time(a.pre_start), parse_time(a.pre_end)),
               'RUN': (parse_time(a.pre_end), parse_time(a.post_start)),
               'POST': (parse_time(a.post_start), parse_time(a.post_end))}
@@ -89,7 +91,7 @@ def main():
                 raise ValueError('CloudWatch payload must be an object')
             check(f'cloudwatch_json:{iid}', True, 'valid JSON object')
             check(f'cloudwatch_identity:{iid}',
-                  data.get('instance_id') == iid and data.get('experiment') == 'EXP-001'
+                  data.get('instance_id') == iid and data.get('experiment') == a.experiment
                   and data.get('run_id') == a.campaign_id,
                   {'instance_id': data.get('instance_id'), 'run_id': data.get('run_id')})
             period = data.get('period_seconds')

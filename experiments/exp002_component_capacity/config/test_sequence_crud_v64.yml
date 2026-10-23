@@ -1,0 +1,30 @@
+schema_version: '1.0'
+experiment_id: EXP-002
+execution:
+  mode: sequential
+  stop_on_failure: false
+  cooldown_seconds: 5
+scenarios:
+  - id: DB-SMOKE
+    users: 3
+    spawn_rate: 1
+    duration: 60s
+    sla:
+      max_latency_p95_ms: 1000
+      max_error_rate: 0.01
+      min_throughput_rps: 1
+  - id: DB-CRUD
+    users: 5
+    spawn_rate: 1
+    duration: 60s
+    http:
+      operations:
+        - {method: POST, path: /events, weight: 5, payload: {payload: exp002-v64}, expected_status: 201}
+        - {method: GET, path: '/events/{event_id}', weight: 3}
+        - {method: PUT, path: '/events/{event_id}', weight: 2, payload: {payload: exp002-updated}}
+        - {method: PATCH, path: '/events/{event_id}', weight: 2, payload: {payload: exp002-patched}}
+        - {method: DELETE, path: '/events/{event_id}', weight: 1, expected_status: 204}
+    sla:
+      max_latency_p95_ms: 1000
+      max_error_rate: 0.01
+      min_throughput_rps: 1

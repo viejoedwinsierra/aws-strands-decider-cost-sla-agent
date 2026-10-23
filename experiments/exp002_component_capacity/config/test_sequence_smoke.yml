@@ -1,0 +1,12 @@
+schema_version: '1.0'
+experiment_id: EXP-002
+execution:
+  mode: sequential
+  stop_on_failure: true
+  cooldown_seconds: 0
+scenarios:
+  - id: DB-SMOKE
+    name: smoke
+    users: 3
+    spawn_rate: 1
+    duration: 60s

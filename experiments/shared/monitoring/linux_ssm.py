@@ -94,8 +94,9 @@ print(base64.b64encode(payload).decode())'''
     (outdir/'linux_monitor_report.json').write_text(json.dumps(report,indent=2)+'\n')
     return report
 
-def upload(profile,region,bucket,campaign,outdir,ids):
-    prefix=f'experiments/exp001_capacity/results/campaigns/{campaign}/linux'
+def upload(profile,region,bucket,campaign,outdir,ids,experiment="EXP-001"):
+    folder={'EXP-001':'exp001_capacity','EXP-002':'exp002_component_capacity'}[experiment]
+    prefix=f'experiments/{folder}/results/campaigns/{campaign}/linux'
     for name in [*(f'{i}.jsonl' for i in ids),'linux_monitor_report.json']:
         path=outdir/name
         key=f's3://{bucket}/{prefix}/{name}'
@@ -112,6 +113,7 @@ def main():
         p.add_argument('--'+key,required=True)
     for key in ('campaign-id','start','end','bucket','output-dir'):
         p.add_argument('--'+key)
+    p.add_argument('--experiment', choices=['EXP-001','EXP-002'], default='EXP-001')
     a=p.parse_args()
     ids=[a.http_id,a.locust_id]
     if len(set(ids))!=2: p.error('Expected two distinct EC2 instances')
@@ -120,7 +122,7 @@ def main():
         if not all([a.campaign_id,a.start,a.end,a.bucket,a.output_dir]): p.error('collect requires campaign fields')
         outdir=Path(a.output_dir)
         retrieve(a.profile,a.region,ids,a.start,a.end,outdir)
-        upload(a.profile,a.region,a.bucket,a.campaign_id,outdir,ids)
+        upload(a.profile,a.region,a.bucket,a.campaign_id,outdir,ids,a.experiment)
         print('LINUX_MONITOR_EVIDENCE_VERIFIED',flush=True)
 
 if __name__=='__main__':

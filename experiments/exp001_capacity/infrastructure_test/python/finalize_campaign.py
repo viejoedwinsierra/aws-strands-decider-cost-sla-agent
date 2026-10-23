@@ -30,8 +30,9 @@ def main():
     for name in ('campaign-id', 'pre-start', 'pre-end', 'post-start', 'post-end', 'inventory', 'profile', 'region', 'bucket'):
         parser.add_argument('--' + name, required=True)
     parser.add_argument('--period', type=int, default=300)
+    parser.add_argument('--experiment', choices=['EXP-001','EXP-002'], default='EXP-001')
     args = parser.parse_args()
-    if not re.fullmatch(r'exp001_[0-9]{8}T[0-9]{6}[0-9]+Z', args.campaign_id):
+    if not re.fullmatch(r'(exp001_[0-9]{8}T[0-9]{6}[0-9]+Z|exp002_campaign_[0-9]{8}T[0-9]{6}Z)', args.campaign_id) or (args.experiment == 'EXP-001') != args.campaign_id.startswith('exp001_'):
         parser.error('Invalid campaign ID')
     if args.period < 60 or args.period % 60:
         parser.error('Period must be multiple of 60')
@@ -43,7 +44,8 @@ def main():
     timestamps = [parse(x) for x in (args.pre_start, args.pre_end, args.post_start, args.post_end)]
     if timestamps != sorted(timestamps) or len(set(timestamps)) != 4:
         parser.error('Invalid PRE/RUN/POST ordering')
-    directory = BASE / 'results' / 'campaigns' / args.campaign_id
+    folder = 'exp001_capacity' if args.experiment == 'EXP-001' else 'exp002_component_capacity'
+    directory = BASE.parent / folder / 'results' / 'campaigns' / args.campaign_id
     summary_path = directory / 'campaign_summary.json'
     summary = json.loads(summary_path.read_text(encoding='utf-8'))
     if summary.get('campaign_id') != args.campaign_id:
@@ -52,7 +54,8 @@ def main():
     ids = [item['instance_id'] for item in inventory['instances']]
     if not ids or len(ids) != len(set(ids)):
         raise ValueError('Empty or duplicate EC2 inventory')
-    if not {'http-server', 'load-generator'}.issubset({i.get('role') for i in inventory['instances']}):
+    required_roles = {'http-server', 'load-generator'} if args.experiment == 'EXP-001' else {'workload-server', 'load-generator'}
+    if not required_roles.issubset({i.get('role') for i in inventory['instances']}):
         raise ValueError('Missing required EC2 roles')
     timeline = {
         'schema_version': '1.0', 'campaign_id': args.campaign_id,
@@ -69,7 +72,7 @@ def main():
     cwdir = directory / 'cloudwatch'
     cmd = [sys.executable, str(EXPORTER), '--instance-ids', *ids, '--start-time', args.pre_start,
            '--end-time', args.post_end, '--region', args.region, '--profile', args.profile,
-           '--experiment', 'EXP-001', '--run-id', args.campaign_id, '--catalog', str(CATALOG),
+           '--experiment', args.experiment, '--run-id', args.campaign_id, '--catalog', str(CATALOG),
            '--output-dir', str(cwdir), '--period', str(args.period)]
     summary['observability_status'] = 'COLLECTING'
     save(summary_path, summary)
@@ -87,7 +90,7 @@ def main():
             series_report[instance_id] = {'series': len(stats), 'datapoints': total,
                                           'no_data_series': sum(item['status'] == 'no_data' for item in stats)}
         # S3 is the source of truth; upload before verifying remote SHA-256.
-        prefix = f'experiments/exp001_capacity/results/campaigns/{args.campaign_id}'
+        prefix = f'experiments/{folder}/results/campaigns/{args.campaign_id}'
         paths = [Path(args.inventory), directory / 'experiment_timeline.json',
                  *[cwdir / f'{i}.json' for i in ids]]
         names = ['ec2_inventory.json', 'experiment_timeline.json', *[f'cloudwatch/{i}.json' for i in ids]]

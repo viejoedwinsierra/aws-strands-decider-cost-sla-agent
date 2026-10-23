@@ -47,7 +47,7 @@ PING="$(aws_cli ssm describe-instance-information \
 REMOTE_CHECK='set -e
 systemctl is-active --quiet postgresql
 systemctl is-active --quiet exp002-fastapi
-curl -fsS --max-time 10 http://127.0.0.1:8001/health
+curl -fsS --max-time 10 http://127.0.0.1:8001/ready
 '
 
 PARAMETERS="$(REMOTE_CHECK="$REMOTE_CHECK" python3 - <<'PY'

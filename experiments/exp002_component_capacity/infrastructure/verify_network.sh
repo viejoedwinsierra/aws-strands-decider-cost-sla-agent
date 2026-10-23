@@ -35,7 +35,7 @@ WORKLOAD_PRIVATE_IP="$(aws_cli ec2 describe-instances \
 
 echo "EXP-002 | Verify private connectivity"
 echo "Source: $LOCUST_INSTANCE_ID"
-echo "Target: http://$WORKLOAD_PRIVATE_IP:8001/health"
+echo "Target: http://$WORKLOAD_PRIVATE_IP:8001/ready"
 
 TMP="$(mktemp)"
 trap 'rm -f "$TMP"' EXIT
@@ -51,7 +51,7 @@ ip = sys.argv[2]
 commands = [
     "set -eu",
     f"curl --fail --silent --show-error --connect-timeout 5 --max-time 15 "
-    f"http://{ip}:8001/health",
+    f"http://{ip}:8001/ready",
     "echo",
     "echo NETWORK_VERIFICATION_PASSED",
 ]

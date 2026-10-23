@@ -7,6 +7,7 @@ AWS_PROFILE="${AWS_PROFILE:-academy-sandbox}"
 AWS_REGION="${AWS_REGION:-us-east-1}"
 PROJECT_TAG="${PROJECT_TAG:-AWS-Cost-SLA-Decision-Agent}"
 EXPERIMENT_ID="${EXPERIMENT_ID:-EXP-002}"
+ENVIRONMENT="${ENVIRONMENT:-academy-sandbox}"
 INSTANCE_TYPE="${INSTANCE_TYPE:-t3.micro}"
 INSTANCE_PROFILE="${INSTANCE_PROFILE:-LabInstanceProfile}"
 INSTANCE_ROLE="${INSTANCE_ROLE:-workload-server}"
@@ -24,7 +25,7 @@ aws_cli sts get-caller-identity --query Account --output text >/dev/null || fail
 
 # Reuse an existing instance, but only if both ownership tags match.
 INSTANCE_ID="$(aws_cli ec2 describe-instances \
-  --filters "Name=tag:Project,Values=$PROJECT_TAG" "Name=tag:Experiment,Values=$EXPERIMENT_ID" "Name=tag:Role,Values=$INSTANCE_ROLE" \
+  --filters "Name=tag:Project,Values=$PROJECT_TAG" "Name=tag:Experiment,Values=$EXPERIMENT_ID" "Name=tag:Role,Values=$INSTANCE_ROLE" "Name=tag:Environment,Values=$ENVIRONMENT" \
             'Name=instance-state-name,Values=pending,running,stopping,stopped' \
   --query 'Reservations[].Instances[] | sort_by(@,&LaunchTime)[-1].InstanceId' --output text)"
 [[ "$INSTANCE_ID" == "None" ]] && INSTANCE_ID=""
@@ -65,7 +66,7 @@ if [[ -z "$INSTANCE_ID" ]]; then
     --iam-instance-profile "Name=$INSTANCE_PROFILE" \
     --subnet-id "$SUBNET_ID" --security-group-ids "$SG_ID" \
     --metadata-options 'HttpTokens=required,HttpEndpoint=enabled' \
-    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_NAME},{Key=Project,Value=$PROJECT_TAG},{Key=Experiment,Value=$EXPERIMENT_ID},{Key=Role,Value=$INSTANCE_ROLE}]" \
+    --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=$INSTANCE_NAME},{Key=Project,Value=$PROJECT_TAG},{Key=Experiment,Value=$EXPERIMENT_ID},{Key=Environment,Value=$ENVIRONMENT},{Key=Role,Value=$INSTANCE_ROLE}]" \
     --query 'Instances[0].InstanceId' --output text)" || fail "EC2 RunInstances rechazado; revisar permisos, perfil y limites"
   echo "EC2 creada: $INSTANCE_ID" >&2
 else
@@ -81,6 +82,11 @@ else
 
   [[ "$ACTUAL_SG_NAME" == "$SG_NAME" ]] ||     fail "Security Group inesperado: $ACTUAL_SG_NAME (esperado: $SG_NAME)"
 fi
+
+# Shared discovery requires the same Experiment/Environment/Project tags as EXP-001.
+aws_cli ec2 create-tags --resources "$INSTANCE_ID" --tags \
+  "Key=Project,Value=$PROJECT_TAG" "Key=Experiment,Value=$EXPERIMENT_ID" \
+  "Key=Environment,Value=$ENVIRONMENT" "Key=Role,Value=$INSTANCE_ROLE"
 
 STATE="$(aws_cli ec2 describe-instances --instance-ids "$INSTANCE_ID" \
   --query 'Reservations[0].Instances[0].State.Name' --output text)"
