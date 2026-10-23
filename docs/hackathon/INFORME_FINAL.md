@@ -1,97 +1,53 @@
-# InfraVita V2 — Informe de cierre técnico y experimental
+# InfraVita V2 — Experimental hackathon final report
 
-**Fecha de corte:** 23 de octubre de 2026
-**Evento:** Agent Experience Hackathon — Strands Decider 2B
-**Estado:** cierre de la implementación experimental; documentación para revisión y entrega. No equivale a confirmación de publicación o envío al evento.
+**Evidence cut-off:** October 23, 2026
+**Event:** Agent Experience Hackathon — Strands Decider 2B
+**Status:** Experimental implementation and documentation published; external hackathon submission/acceptance not independently confirmed.
 
-## Resumen ejecutivo
+## Executive conclusion
 
-InfraVita V2 es un prototipo de apoyo a decisiones sobre capacidad, eficiencia computacional y riesgo de SLA a partir de evidencias históricas de infraestructura y carga. El alcance experimental implementado incluye EXP-001 (servicio HTTP) y EXP-002 (FastAPI + PostgreSQL), dos campañas por experimento y cinco escenarios de carga por campaña. Se ejecutaron **20 casos de inferencia con el modelo local Strands Decider 2B v21 y 20 con Amazon Bedrock (Amazon Nova Micro)**: 40 inferencias con estado de ejecución exitoso. No se realizaron cambios de capacidad en AWS como resultado de las decisiones.
+InfraVita V2 is a **working decision-support prototype in evolution**, not a final product or an autonomous cloud cost optimizer. Its strongest demonstrated outcome is the controlled separation of **measured telemetry**, **model proposals** and **effective policy-governed recommendations** across two AWS experiments and two inference providers.
 
-El proyecto separa tres niveles: **evidencia observada**, **recomendación probabilística o generativa** y **decisión efectiva gobernada por reglas**. Esta distinción constituye el resultado principal: las propuestas del modelo pueden ser rechazadas si falta evidencia de SLA o de recursos.
+## Experimental coverage
 
-## Arquitectura y fuentes
+- EXP-001: EC2 HTTP service and Locust; two campaigns, five load scenarios each.
+- EXP-002: EC2 FastAPI and PostgreSQL; two campaigns, five scenarios each.
+- Historical evidence: 20 unique RUN_IDs, 730 CloudWatch observations and 60 Linux SSM snapshots.
+- Inference: 20 local Strands Decider 2B v21 and 20 Bedrock Nova Micro executions; all 40 reported as complete.
+- Comparison: raw agreement 8/10 for EXP-001 and 5/10 for EXP-002; effective agreement 10/10 for EXP-002 due to conservative SLA guardrails.
 
-1. Generación de carga y experimentos: Locust, HTTP, FastAPI y PostgreSQL sobre EC2.
-2. Captura: métricas CloudWatch y snapshots Linux vía AWS Systems Manager; resultados normalizados de carga. Evidencias archivadas en S3 durante la ejecución experimental y reutilizadas localmente para el análisis de cierre.
-3. Integración: runner oficial `scripts/start_agent.sh` y módulo `src.agent.official_integration`; selección de proveedor `local` o `bedrock`.
-4. Inferencia: Strands Decider 2B v21 local y Amazon Nova Micro mediante Amazon Bedrock (`us.amazon.nova-micro-v1:0`, región `us-east-2`).
-5. Gobernanza: `computational-v1` valida la propuesta frente al estado oficial de SLA y las evidencias disponibles.
-6. Salida: JSON con `run_id`, `evidence_sha256`, métricas, recomendación, razones, guardrail y decisión efectiva.
+![Latency and load](../images/latency_by_scenario.svg)
 
-**Aislamiento de credenciales:** la lectura de evidencias de AWS Academy y la invocación de Bedrock en cuenta independiente no deben mezclar perfiles. Ninguna API key, token o credencial debe incorporarse al repositorio, informes o logs públicos. `--offline` en este flujo describe lectura local de evidencias; con `--provider bedrock` sí se invoca el servicio remoto.
+## Operational and economic insight
 
-## Cobertura de los reportes
+**A minimally deployed, connected, observable service can incur operating costs while idle.** This motivates separating a measurable `C_baseline` from load-dependent and support/change costs. The historical reports do not contain usable `infrastructure_cost` values; therefore the actual idle baseline, marginal cost per request, AWS spend and monetary savings **remain unmeasured**.
 
-| Experimento | Casos únicos | CloudWatch | Linux SSM | SLA oficial |
-|---|---:|---:|---:|---|
-| EXP-001 | 10 | 580 | 42 | 10 PASS |
-| EXP-002 | 10 | 150 | 18 | 10 NOT_EVALUATED |
-| **Total único** | **20** | **730** | **60** | |
+## Results and caveats
 
-**Importante:** las 730 observaciones y los 60 snapshots corresponden a las evidencias de los 20 casos únicos; **no** se duplican al ejecutar dos proveedores sobre las mismas entradas.
-
-## Resultados comparativos
-
-| Experimento / proveedor | Decisiones propuestas | Decisiones efectivas | Sobrescrituras |
-|---|---|---|---:|
-| EXP-001 / Local | 8 Maintain; 2 Insufficient Evidence | 8 Maintain; 2 Insufficient Evidence | 0 |
-| EXP-001 / Bedrock | 10 Maintain | 10 Maintain | 0 |
-| EXP-002 / Local | 3 Maintain; 1 Optimize; 6 Insufficient Evidence | 10 Insufficient Evidence | 4 |
-| EXP-002 / Bedrock | 8 Maintain; 2 Insufficient Evidence | 10 Insufficient Evidence | 8 |
-
-La concordancia entre decisiones propuestas es **8/10 (80 %) en EXP-001** y **5/10 (50 %) en EXP-002**. La concordancia de decisiones efectivas es **8/10 (80 %) en EXP-001** y **10/10 (100 %) en EXP-002**. La concordancia efectiva perfecta de EXP-002 es consecuencia de los guardrails, no prueba de equivalencia entre modelos.
-
-### Hallazgos por experimento
-
-**EXP-001.** Las diez ejecuciones tienen `sla_status=PASS`. Bedrock propone `Maintain` en todas; el modelo local indica `Insufficient Evidence` para LB-01 en ambas campañas. No se activaron sobrescrituras. La divergencia de LB-01 debe presentarse como desacuerdo entre proveedores y no como error automáticamente atribuible a uno de ellos.
-
-**EXP-002.** Las diez ejecuciones están `COMPLETED`, pero el SLA oficial figura `NOT_EVALUATED`. El guardrail convierte las doce propuestas accionables de ambos modelos en `Insufficient Evidence`. El p95 crece de ~10 ms en DB-01 a ~1.400–1.500 ms en DB-05, con tasa de errores normalizada igual a 0 en los diez casos. Esto muestra degradación de latencia a mayor carga, pero no permite afirmar formalmente PASS o FAIL del SLA sin umbrales y evaluación oficial.
-
-### Caso de control: razonamiento de Bedrock frente a SLA
-
-En el reporte de EXP-002 existen explicaciones generadas por Bedrock que mencionan que el SLA pasó, aunque el campo estructurado de entrada indica `NOT_EVALUATED`. Por tanto, el texto explicativo del modelo **no puede tratarse como evidencia validada**. La política de decisión actúa como barrera ante esa discrepancia. Se recomienda incorporar una verificación de consistencia entre las razones textuales y los campos estructurados antes de mostrar explicaciones al usuario final.
-
-## Calidad, limitaciones y riesgos
-
-- **SLA:** EXP-002 carece de evaluación oficial; no extrapolar de latencia y errores a un veredicto sin umbral definido.
-- **Costo monetario:** `infrastructure_cost` y `monetary_cost` aparecen nulos; no se demostró ahorro en USD ni retorno financiero. El costo computacional proxy no equivale a facturación AWS.
-- **Capacidad:** `capacity_headroom` no está disponible. No puede inferirse que una instancia sea redimensionable solo por CPU media baja.
-- **Observabilidad:** las ventanas cortas contienen pocas muestras CloudWatch por recurso; snapshots Linux SSM son incompletos y CPU Linux puede no ser derivable.
-- **Atribución:** para EXP-002 no debe confundirse carga de API, base de datos y generador Locust; no atribuir eficiencia por petición a una instancia sin rol confirmado.
-- **Histórico:** algunos registros contienen `historical_telemetry.telemetry_quality=UNKNOWN` pese a existir `telemetry_contract` con mediciones. Se trata de estructuras distintas; debe explicitarse y corregirse el mapeo antes de usar la calidad histórica como condición de automatización.
-- **Confianza:** Bedrock entrega `confidence_calibrated=false` y probabilidad/confianza nulas. No comparar directamente su certeza con las probabilidades del modelo local ni presentar porcentajes de confianza inventados.
-- **Repetibilidad:** los dos proveedores reciben el mismo `run_id` y `evidence_sha256` por caso. La inferencia generativa puede variar en nuevas ejecuciones; los resultados documentados son una fotografía reproducible en términos de datos de entrada, no garantía de salida idéntica.
-- **Operación:** el prototipo recomienda; no aplica automáticamente cambios de capacidad, escalamiento ni acciones correctivas en producción.
-
-## Criterios de aceptación y veredicto
-
-| Criterio | Veredicto |
+| Finding | Interpretation |
 |---|---|
-| EXP-001 y EXP-002 ejecutados y evidenciados | CUMPLIDO |
-| Procesamiento histórico de 20 casos | CUMPLIDO |
-| Inferencia local y Bedrock | CUMPLIDO (40/40) |
-| Trazabilidad por RUN_ID y hash de evidencia | CUMPLIDO en reportes |
-| Guardrails y decisiones efectivas | CUMPLIDO |
-| Comparación pareada entre proveedores | CUMPLIDO en este entregable |
-| SLA evaluado para EXP-002 | NO CUMPLIDO |
-| Ahorro monetario validado | NO DEMOSTRADO |
-| Acciones automáticas de infraestructura | FUERA DEL ALCANCE MVP |
-| Publicación y entrega al hackathon | PENDIENTE DE CONFIRMACIÓN EXTERNA |
+| EXP-001 SLA state: 10 `PASS` | One run separately has `execution_status=FAILED`; do not merge these fields |
+| EXP-002 SLA state: 10 `NOT_EVALUATED` | No formal SLA PASS/FAIL conclusion is supported |
+| EXP-002 p95 rises from ~10 to 1,400–1,500 ms | Suggests substantial latency degradation at higher load; not proof of an SLA violation without thresholds |
+| EXP-002 effective decisions: all `Insufficient Evidence` | Deterministic guardrail blocked unsupported action |
+| `capacity_headroom` and monetary cost unavailable | No verified rightsizing opportunity or savings claim |
+| Short campaigns, limited CloudWatch samples | Not enough for seasonal demand or long-term reliability claims |
 
-**Conclusión:** el MVP está técnicamente integrado y cuenta con evidencias suficientes para documentar un cierre honesto de hackathon. Su valor demostrado es la ingestión histórica, la inferencia multiproveedor, la trazabilidad y la gobernanza de recomendaciones bajo evidencia incompleta. La evaluación integral de SLA y la optimización financiera verificable quedan como trabajo futuro.
+Some generated Bedrock explanations may assert an SLA pass inconsistent with structured `NOT_EVALUATED`; the structured fields and guardrail are authoritative. Confidence values are not comparable across models without calibration.
 
-## Reproducción y custodia
+## Deliverables and reproducibility
 
-Los resultados originales son `reports/local_model/exp001_local.json`, `reports/local_model/exp002_local.json`, `reports/bedrock/exp001_bedrock.json`, `reports/bedrock/exp002_bedrock.json`. Los logs oficiales de Bedrock incluyen `OFFICIAL_RUNNER_VALIDATED`. Este paquete agrega `comparison_by_run.csv`, `comparison_summary.json` y `SOURCE_MANIFEST.sha256`. Los hashes del manifiesto identifican exactamente los archivos usados en el análisis.
+[Documentation hub](../README.md) · [Deployment](../operations/INFRASTRUCTURE_DEPLOYMENT.md) · [Run tests](../operations/EXPERIMENT_EXECUTION.md) · [Offline validation](../operations/OFFLINE_AUDIT.md) · [Results](../experiments/RESULTADOS_Y_ESTADISTICAS.md) · [Model comparison](../models/COMPARACION_LOCAL_BEDROCK.md).
 
-Para reproducir la comparación **no se requiere AWS, credenciales, despliegue ni reinstalación de dependencias**: basta con los cuatro JSON y el script `compare_reports.py` incluido en el paquete.
+The four committed JSON reports and `comparison_by_run.csv` preserve run-level results. The infrastructure has been removed, so historical review is **offline-first**. Recreating EC2 resources or calling Bedrock again is neither necessary nor implied by this report.
 
-## Trabajo futuro (no atribuir al MVP)
+## Next milestones — not achieved in the current MVP
 
-1. Contrato formal de SLA por escenario, con umbrales p95, error rate y disponibilidad.
-2. Enriquecimiento de capacidad por rol y tipo de instancia, medición de headroom y CPU credits.
-3. Datos de costos de AWS y validación del ahorro potencial contra alternativas reales.
-4. Mejorar frecuencia de observabilidad y cobertura PRE/RUN/POST, respetando la granularidad de CloudWatch.
-5. Validar consistencia factual de justificaciones generadas y calibrar incertidumbre.
-6. Nuevas campañas de estrés sostenido, saturación, recuperación y pruebas multi-servicio, sin afirmar que se ejecutaron en esta entrega.
+1. Measure the minimum idle infrastructure cost using inventory, billing and controlled uptime windows.
+2. Run longer CPU/memory/queue saturation and recovery campaigns with role attribution.
+3. Define formal SLA thresholds for EXP-002 and validate service-level outcomes.
+4. Estimate marginal cost per request and compare optimization alternatives with actual charges.
+5. Validate model rationale consistency, uncertainty and policy correctness independently.
+6. Extend to multi-service lifecycle decisions: maintain, optimize, scale, modernize and retire.
+
+**Final assessment:** The prototype provides a reproducible foundation for evidence-based infrastructure decisions. It does not yet demonstrate a production-grade optimizer, autonomous changes or verified cost savings.

@@ -1,13 +1,16 @@
-# Matriz de evidencias y procedencia
+# Evidence matrix and provenance
 
-| Fuente | Evidencia | Propósito | Estado |
-|---|---|---|---|
-| EXP-001 | 10 ejecuciones / 2 campañas | HTTP, Locust, capacidad | Histórico procesado |
-| EXP-002 | 10 ejecuciones / 2 campañas | FastAPI + PostgreSQL | Histórico procesado |
-| CloudWatch | 730 observaciones reportadas | Infraestructura | Cobertura corta; no inferir tendencia temporal |
-| Linux / SSM | 60 snapshots reportados | Sistema operativo | Complemento de CloudWatch |
-| Local | 20 inferencias | Decisión propuesta | Completado |
-| Bedrock | 20 inferencias | Decisión propuesta | Completado |
-| `reports/comparison/comparison_by_run.csv` | Comparación por RUN_ID | Auditoría | Archivo incluido en paquete |
+| Source | Scope | Interpretation |
+|---|---|---|
+| `reports/local_model/exp001_local.json` | 10 EXP-001 local inferences | Observed evidence + local proposed/effective decisions |
+| `reports/bedrock/exp001_bedrock.json` | 10 EXP-001 Bedrock inferences | Same RUN_ID/evidence hashes, different provider |
+| `reports/local_model/exp002_local.json` | 10 EXP-002 local inferences | `sla_status=NOT_EVALUATED` |
+| `reports/bedrock/exp002_bedrock.json` | 10 EXP-002 Bedrock inferences | Same evidence hashes; guardrails applied |
+| `reports/comparison/comparison_by_run.csv` | 20 paired cases | Per-run SLA, p95, RPS, provider recommendations, override flags |
+| `reports/comparison/comparison_summary.json` | Aggregate comparison | Derived statistics, not raw monitoring source |
 
-Los resultados son históricos; repetir inferencias **no** equivale a nuevas pruebas de carga. Las campañas de 60–120 s no prueban estacionalidad, costos de largo plazo ni ahorro logrado. En EXP-002 el SLA figura `NOT_EVALUATED`, no `PASS`.
+Across **20 unique runs**, the reports record **730 CloudWatch observations** and **60 Linux SSM snapshots**. Do not double-count these because two inference providers processed the same inputs. The telemetry contracts contain sampled/aggregated CPU and memory measurements, not complete high-resolution time series.
+
+![Telemetry sample coverage](../images/telemetry_coverage.svg)
+
+See [Results](RESULTADOS_Y_ESTADISTICAS.md), [Resource utilization](RESOURCE_UTILIZATION.md) and [Integrity validator](../validation/validate_report_integrity.py).

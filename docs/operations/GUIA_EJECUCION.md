@@ -1,50 +1,25 @@
-# 05 — Manual de ejecución y reproducción
+# Operations guide — choose the correct mode
 
-## Alcance
+InfraVita has **three different operational workflows**, which must not be conflated:
 
-Dos modos: (A) **auditar resultados históricos sin AWS**; (B) **repetir inferencias sobre el histórico** usando un modelo local o Bedrock. No se requiere desplegar EC2, recrear S3 ni repetir Locust para auditar el cierre.
+| Workflow | AWS infrastructure required? | Invokes a model? | Documentation |
+|---|---|---|---|
+| Historical report audit | No | No | [Offline audit](OFFLINE_AUDIT.md) |
+| Repeat local/Bedrock inference over cached evidence | No EC2; Bedrock requires network/API key | Yes | [Command reference](COMANDOS_PRINCIPALES.md) |
+| Deploy and rerun experimental campaigns | Yes | Not inherently; inference is a separate step | [Infrastructure deployment](INFRASTRUCTURE_DEPLOYMENT.md), [Experiment execution](EXPERIMENT_EXECUTION.md) |
 
-### A. Auditar el cierre (preferido)
+**Default for reviewing the published hackathon results:** offline audit. The historical infrastructure has already been removed. Deploy only with separate authorization and an explicit cost plan.
 
-1. Extraer el paquete documental en Ubuntu/WSL.
-2. Abrir la carpeta que contiene `sources/`, `compare_reports.py` y `SOURCE_MANIFEST.sha256`.
-3. Ejecutar `python scripts/validate_historical_reports.py` para verificar 4 reportes, 20 casos pareados, 40 decisiones y hashes de evidencia entre proveedores.
-4. Ejecutar `python compare_reports.py` si desea regenerar las tablas de comparación.
-5. Ejecutar `sha256sum -c SOURCE_MANIFEST.sha256` para verificar las fuentes incluidas.
-6. Revisar `01_ESTADISTICAS_Y_PRUEBAS.md`, `02_COMPARACION_DE_MODELOS.md` y `HACKATHON_FINAL_REPORT.md`.
+## Existing Python environment
 
-### B. Repetir inferencia local en el repositorio
+```bash
+cd /mnt/c/git_edwin/aws-strands-decider-cost-sla-agent || exit 1
+source /home/edwin/.venvs/infravita-decider/bin/activate
+bash scripts/start_agent.sh --check --offline
+```
 
-1. `cd /mnt/c/git_edwin/aws-strands-decider-cost-sla-agent`.
-2. `source /home/edwin/.venvs/infravita-decider/bin/activate`.
-3. `bash scripts/start_agent.sh --check --offline`.
-4. Verificar que existan los históricos `experiments/exp001_capacity/results` y `experiments/exp002_component_capacity/results`.
-5. Ejecutar los dos comandos de `03_COMANDOS_PRINCIPALES.md` bajo **Inferencia local**.
-6. Verificar que cada JSON tenga `total_runs=10` y diez elementos en `decisions`.
+The `--check` flag does not run inference. Do not reinstall existing packages or replace the environment without evidence that it is broken.
 
-### C. Repetir Bedrock (solo si se autorizan nuevas llamadas)
+## Reproducibility limits
 
-1. Activar el mismo entorno Ubuntu; `python -c 'import boto3'` debe funcionar.
-2. Cargar token con `source scripts/load_bedrock_credentials.sh`; la API key es de una cuenta AWS independiente de Academy.
-3. Confirmar región `us-east-2` y disponibilidad del modelo sin imprimir credenciales.
-4. Ejecutar comandos de **Inferencia Bedrock** en `03_COMANDOS_PRINCIPALES.md`.
-5. Comprobar en logs `OFFICIAL_RUNNER_VALIDATED`, archivos JSON y número de decisiones.
-6. Regenerar la comparación y comprobar si cambiaron las decisiones; la generación no garantiza salidas idénticas.
-
-### D. Diagnóstico de errores
-
-| Síntoma | Comprobación / acción |
-|---|---|
-| `ModuleNotFoundError: boto3` | Verificar que el venv activo sea el existente; instalar solo si falta y con aprobación explícita |
-| `CalledProcessError` del bridge | Capturar `stderr` de `src.decider.bedrock_bridge`; evitar mostrar secretos |
-| Falta `AWS_BEARER_TOKEN_BEDROCK` | Volver a cargar el script de credenciales en la sesión actual |
-| Faltan evidencias o `EVIDENCE_BUCKET` | Para inferencia offline, pasar `--local-root` y evitar sincronización S3 |
-| Decisión `Insufficient Evidence` | Revisar `sla_status`, calidad y disponibilidad de telemetría y razón del guardrail |
-| No coinciden decisiones local/Bedrock | Revisar propuestas y guardrails por RUN_ID; no atribuir automáticamente error a un proveedor |
-
-### E. Protección y custodia
-
-- No versionar claves, `.env`, archivos privados ni logs que puedan contener tokens.
-- Preservar `evidence_sha256` y `run_id` al comparar.
-- Evitar `git add .` y cualquier comando de despliegue/destrucción en el cierre.
-- Mantener separados resultados observados, inferencias y trabajo futuro.
+Historical reports and RUN_ID hashes can be audited, but a new generative inference need not produce identical wording or decisions. A new AWS campaign creates new resource usage and evidence, not a replay of the 2026-10-23 measurements. Never report unmeasured costs as savings.

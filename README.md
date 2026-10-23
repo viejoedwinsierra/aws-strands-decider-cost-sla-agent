@@ -1,47 +1,53 @@
-# InfraVita V2 — AWS Cost & SLA Decision Agent
+# InfraVita V2 | Evidence-driven Cost, Capacity & SLA Decision Prototype
 
-**Una arquitectura experimental para decisiones trazables sobre capacidad, costos, SLA e integridad durante el ciclo de vida del software y la infraestructura.**
+**An evolving experimental prototype, not a production-ready product.** InfraVita V2 studies infrastructure behavior, operational cost exposure, service-level risk, and decision governance using reproducible AWS experiments and historical telemetry.
 
-[Documentación completa](docs/README.md) · [Resultados](docs/experiments/RESULTADOS_Y_ESTADISTICAS.md) · [Comparación de modelos](docs/models/COMPARACION_LOCAL_BEDROCK.md) · [Cómo ejecutar](docs/operations/GUIA_EJECUCION.md)
+[Documentation hub](docs/README.md) · [Infrastructure deployment](docs/operations/INFRASTRUCTURE_DEPLOYMENT.md) · [Run the experiments](docs/operations/EXPERIMENT_EXECUTION.md) · [Measured results](docs/experiments/RESULTADOS_Y_ESTADISTICAS.md) · [Local vs Bedrock](docs/models/COMPARACION_LOCAL_BEDROCK.md) · [Limitations](docs/hackathon/INFORME_FINAL.md)
 
-![Flujo experimental](docs/images/architecture.svg)
+![Experimental architecture](docs/images/architecture.svg)
 
-## Resumen ejecutivo
+## The core economic question: what does the minimum running service cost?
 
-InfraVita V2 integra pruebas reproducibles de servicios AWS, telemetría CloudWatch y Linux/SSM, evidencias históricas y dos proveedores de inferencia: Strands Decider local y Amazon Bedrock. Una política computacional separa la propuesta del modelo de la decisión efectiva, para evitar acciones que no estén justificadas por el estado de las evidencias.
+**An idle service is not necessarily a zero-cost service.** Provisioned compute, attached storage, public IPv4 addresses (where applicable), monitoring, logs, network components and operational maintenance may create a baseline cost even at zero application traffic. Charges depend on the exact AWS resources, pricing dimensions and whether they remain provisioned or active; there is **no measured dollar amount for this baseline in the current experiments**.
 
-## Resultados del hackathon
+A useful conceptual decomposition is:
 
-| Indicador | Resultado histórico |
+\[ C_{total}(T)=C_{baseline}(T)+C_{workload}(T)+C_{operations}(T)+C_{change}(T) \]
+
+Here, `C_baseline` is the cost of keeping the minimum deployable, connected and observable service available over time `T`; `C_workload` represents load-dependent usage; `C_operations` covers monitoring and support; `C_change` represents deployment, evolution and recovery work. **This is a conceptual model, not an AWS billing result.** The first next experiment should measure an idle baseline and then the incremental cost of controlled workload using actual billing/cost data.
+
+![Cost framework — conceptual, not measured](docs/images/cost_baseline_concept.svg)
+
+## What was implemented and observed
+
+| Historical evidence | Verified scope |
 |---|---:|
-| Experimentos | 2 (HTTP/Locust; FastAPI/PostgreSQL) |
-| Campañas / escenarios | 4 / 20 |
-| Inferencias local / Bedrock | 20 / 20 |
-| CloudWatch / snapshots Linux SSM | 730 / 60 |
-| Acuerdo bruto local–Bedrock EXP-001 | 8/10 (80 %) |
-| Acuerdo bruto local–Bedrock EXP-002 | 5/10 (50 %) |
-| Acuerdo efectivo EXP-002 con guardrails | 10/10 (100 %) |
+| Experimental systems | EXP-001 HTTP/Locust; EXP-002 FastAPI/PostgreSQL |
+| Campaigns / paired load scenarios | 4 / 20 |
+| Local model / Bedrock inference executions | 20 / 20 |
+| Unique CloudWatch observations / Linux SSM snapshots | 730 / 60 |
+| Raw local–Bedrock agreement, EXP-001 | 8/10 (80%) |
+| Raw local–Bedrock agreement, EXP-002 | 5/10 (50%) |
+| Effective agreement after EXP-002 guardrails | 10/10 (100%) |
 
-La concordancia entre modelos **no demuestra exactitud**. El acuerdo efectivo del EXP-002 responde a guardrails que mantuvieron decisiones conservadoras porque el SLA figuraba `NOT_EVALUATED`. Las campañas cortas (60–120 s) no bastan para inferir patrones estacionales ni calcular ahorros reales.
+EXP-002 had **`sla_status=NOT_EVALUATED` in all ten cases**. Guardrails therefore prevented unsupported actionable decisions. The 100% effective agreement is policy convergence, **not evidence that both models reason identically**. One EXP-001 run had `execution_status=FAILED` even though its structured SLA status was `PASS`; these are distinct fields and must not be conflated.
 
-## Principio rector: integridad del sistema
+![Observed latency across load scenarios](docs/images/latency_by_scenario.svg)
 
-La optimización no debe comprometer la disponibilidad, consistencia de datos, seguridad ni obligaciones de servicio. InfraVita prioriza **integridad de evidencias**, **trazabilidad por RUN_ID y hash**, **guardrails explícitos**, **separación de credenciales**, **reproducibilidad** y **capacidad de auditoría**. No ejecuta automáticamente una recomendación no validada.
+## Why this is a prototype
 
-## Conclusiones
+The historical campaigns lasted roughly 60–120 seconds, with limited sampling. No production-scale reliability assessment, sustained saturation proof, independently verified monetary savings, formal EXP-002 SLA evaluation or autonomous remediation was completed. Recommendations are advisory and policy-controlled; the system does not automatically resize infrastructure.
 
-El MVP demuestra integración funcional de los dos experimentos con dos proveedores y un mecanismo verificable de decisión controlada. **No demuestra todavía ahorro económico, predicción de saturación en producción ni cumplimiento longitudinal de SLA**. El valor de esta entrega es crear una base técnica medible, extensible y auditable.
+**Demonstrated:** evidence ingestion, EC2/SSM/CloudWatch observability, local and Bedrock inference, paired comparison, traceable RUN_ID/hash, and deterministic safety guardrails.
 
-## Próximos avances y aplicaciones
+**Next:** measured idle infrastructure cost, longer and repeated load campaigns, role-aware CPU/memory/headroom, AWS billing attribution, explicit SLA contracts, and decision validation before automation.
 
-1. Campañas más largas y replicadas para estudiar demanda, latencia, colas y degradación sostenida.
-2. Costeo end-to-end: cómputo, almacenamiento, transferencia, observabilidad, operación y evolución.
-3. Decisiones de capacidad, consolidación, escalamiento, modernización y retiro basadas en costo–riesgo–SLA.
-4. Observabilidad de aplicaciones empresariales, plataformas de datos, sistemas regulatorios y arquitecturas multi-cloud.
-5. Gobierno de datos, versiones de modelos, experimentos controlados y evaluación independiente de recomendaciones.
+## Reading path
 
-## Navegación
+1. [Documentation hub](docs/README.md) — all chapters and provenance.
+2. [Architecture and evolution](docs/architecture/VISION_Y_EVOLUCION.md) — components and future scope.
+3. [Deploy infrastructure](docs/operations/INFRASTRUCTURE_DEPLOYMENT.md) and [execute campaigns](docs/operations/EXPERIMENT_EXECUTION.md) — AWS-active workflows, not required for historical review.
+4. [Results and charts](docs/experiments/RESULTADOS_Y_ESTADISTICAS.md) and [telemetry analysis](docs/experiments/RESOURCE_UTILIZATION.md).
+5. [Audit reports without inference](docs/models/TRAZABILIDAD_SIN_INFERENCIA.md) and [model comparison](docs/models/COMPARACION_LOCAL_BEDROCK.md).
 
-Empieza en el [índice técnico](docs/README.md). Consulta la [matriz de evidencias](docs/experiments/MATRIZ_EVIDENCIAS.md), la [guía de operación](docs/operations/GUIA_EJECUCION.md) y los [controles sin inferencia](docs/models/TRAZABILIDAD_SIN_INFERENCIA.md).
-
-> La infraestructura experimental ya fue retirada. La documentación de cierre usa evidencias históricas; no se necesita desplegar recursos para revisar los resultados.
+> The original experiment infrastructure has been torn down. All figures in this documentation are derived from the preserved historical reports. Do not redeploy or incur AWS charges merely to read or validate the results.

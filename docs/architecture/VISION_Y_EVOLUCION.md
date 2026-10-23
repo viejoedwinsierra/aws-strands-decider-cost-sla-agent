@@ -1,23 +1,35 @@
-# 06 — Arquitectura, observabilidad y evolución del ciclo de vida
+# Architecture, operational integrity and evolution
 
-## Resultado demostrado
+InfraVita V2 is an **experimental decision-support prototype** spanning the infrastructure/software lifecycle. Its current scope is evidence-backed capacity and SLA decision governance, not a fully deployed cost optimizer.
 
-InfraVita V2 integra experimentos de carga HTTP (EXP-001) y API/BD (EXP-002), métricas de CloudWatch, snapshots Linux vía SSM, evidencias identificadas por RUN_ID y SHA-256, inferencia con Strands Decider local y Amazon Bedrock Nova Micro, y guardrails deterministas. El prototipo **recomienda**, no ejecuta automáticamente cambios en AWS.
+![Architecture](../images/architecture.svg)
 
-## Limitación estadística central
+## Components and trust boundaries
 
-Las campañas de 60 y 120 segundos fueron demasiado cortas para muestrear suficientemente dinámicas de carga, variabilidad temporal, saturación sostenida, colas, créditos de CPU, recuperación y costos. El número de muestras CloudWatch por ventana es limitado. EXP-002 tiene SLA `NOT_EVALUATED`. No es válido inferir ahorro monetario, SLA productivo ni capacidad futura de estos resultados.
+| Layer | Implemented evidence | Responsibility |
+|---|---|---|
+| Workload | EXP-001 HTTP/Locust; EXP-002 FastAPI/PostgreSQL | Produce controlled request load and service behavior |
+| Infrastructure | EC2, network/security controls, SSM, S3 | Provision isolated experiments and preserve evidence |
+| Telemetry | CloudWatch plus Linux snapshots via SSM | Observe resource usage, availability and service metrics |
+| Integration | `scripts/start_agent.sh`, `src.agent.official_integration` | Discover historical RUN_IDs and normalize model input |
+| Models | Local Strands Decider 2B v21; Bedrock Nova Micro | Propose recommendations; not ground truth |
+| Decision policy | `computational-v1` | Override unsupported actions when evidence/SLA is inadequate |
+| Audit | JSON reports, hashes, comparison CSV | Separate observation, model output and effective decision |
 
-## Arquitectura objetivo (futuro, no demostrado en MVP)
+**Credential isolation:** AWS Academy credentials supported infrastructure/evidence operations; Bedrock used a separate AWS account/API key. The local `--offline` flag means evidence is read locally; `--provider bedrock` still makes a paid remote request.
 
-**Ciclo de vida integrado:** aprovisionamiento → despliegue → operación → monitoreo → detección de anomalías → decisión (mantener/optimizar/escalar/evolucionar) → recuperación/degradación → retiro.
+## Cost baseline hypothesis
 
-**Contrato de observabilidad:** combinar métricas administradas de nube (CloudWatch), métricas propias de sistemas operativos y aplicaciones, inventario de recursos por etiquetas, ventanas temporales, topología y dependencias, calidad y granularidad de datos, trazabilidad por ejecución y costos imputables por servicio.
+A provisioned minimum service can incur cost with zero workload. This depends on actual resource allocation and billing dimensions; no idle-cost USD figure was collected. A valid future test should compare an **idle but deployed** baseline against controlled load and a **deprovisioned** state, using billing data and a complete inventory. Do not interpret low CPU as zero cost or automatic right-sizing eligibility.
 
-**Costos:** separar costo de cómputo/almacenamiento/red, costo de observabilidad (ingesta, retención, consultas, métricas personalizadas), costo de operación y riesgo de SLA. No confundir índices de eficiencia con facturación monetaria.
+## System integrity first
 
-**Evolución metodológica:** extender campañas, replicar a distintas horas y días, instrumentar PRE/RUN/POST, registrar recursos por rol, usar distribuciones e intervalos de incertidumbre, calibrar contra datos reales de facturación, evaluar umbrales SLA explícitos y analizar decisiones a lo largo del tiempo.
+Preserve evidence hashes, consistent experiment identifiers, role attribution, security boundaries, explicit SLA evaluation, and auditability. The system currently **advises only**. Automated scaling, consolidation, migration or retirement require approval, rollback and independently validated policy.
 
-## Declaración de alcance
+## Roadmap (not implemented in this MVP)
 
-**Validado:** cadena experimental, almacenamiento y recuperación histórica, 40 inferencias sobre 20 evidencias únicas, comparación y guardrails. **Pendiente:** evaluación SLA EXP-002, modelos de costo monetario, validación estadística longitudinal, gestión integral automatizada del ciclo de vida y publicación oficial del hackathon.
+1. Measure idle compute/storage/network/monitoring baseline with cost allocation and billing reconciliation.
+2. Run sustained stress, recovery and capacity experiments with finer time-aligned telemetry.
+3. Attribute CPU, memory, I/O and costs to EC2 roles and service components.
+4. Establish explicit SLA contracts and uncertainty-aware decisions.
+5. Expand to enterprise applications, databases, data platforms, modernization and retirement decisions.
