@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from src.analysis.telemetry import summarize_run
+from src.analysis.computational_cost import calculate as calculate_computational_cost
 from src.decider.evidence_adapter import build_state
 from src.decider.decision_guardrail import evaluate
 from src.decider.telemetry_context import prepare_evidence, format_context
@@ -72,7 +73,7 @@ def discover_runs(root):
     return runs
 
 
-def build_records(root):
+def build_records(root, capacity_inventory=None):
     runs = discover_runs(root)
     records = []
     for campaign_dir, campaign in discover_campaigns(root):
@@ -96,6 +97,9 @@ def build_records(root):
                 "telemetry": telemetry,
             }
             contract, additional_metrics = prepare_evidence(base_record, observations)
+            computational_cost = calculate_computational_cost(
+                {**base_record, "telemetry_contract": contract}, capacity_inventory
+            )
             # Append current scenario only after obtaining its measurements;
             # previous prefixes never include later scenarios.
             history.append({
@@ -107,7 +111,11 @@ def build_records(root):
                               if m["value"] is not None
                               and m["aggregation"] in ("Average.mean", "mean", "run_summary")],
             })
-            state = build_state(directory, telemetry_context=format_context(contract, history))
+            state = build_state(directory, telemetry_context=(
+                format_context(contract, history)
+                + ". Computational resource consumption (estimated, not billing): "
+                + json.dumps(computational_cost, sort_keys=True)
+            ))
             # Campaign-wide final status is metadata, not information available
             # to an earlier decision. Do not append it to model state.
             telemetry_files = list((campaign_dir / "cloudwatch").glob("*.json"))
@@ -129,6 +137,7 @@ def build_records(root):
                 "telemetry_counts": counts,
                 "telemetry": telemetry,
                 "telemetry_contract": contract,
+                "computational_cost": computational_cost,
                 "additional_metrics": additional_metrics,
                 "historical_context": list(history),
                 "state": state,
@@ -156,7 +165,10 @@ def infer(record):
 
 def execute(args):
     root = Path(args.local_root).resolve()
-    records = build_records(root)
+    capacity_inventory = None
+    if getattr(args, "capacity_inventory", None):
+        capacity_inventory = read_json(Path(args.capacity_inventory))
+    records = build_records(root, capacity_inventory)
 
     if not records:
         raise ValueError("No valid historical records")
@@ -208,6 +220,7 @@ def main():
     parser.add_argument("--output",
                         default=".infravita/reports/official_v21.json")
     parser.add_argument("--infer", action="store_true")
+    parser.add_argument("--capacity-inventory", help="Optional JSON mapping instance IDs to vcpu and memory_gib")
     execute(parser.parse_args())
 
 
