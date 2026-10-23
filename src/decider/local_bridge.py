@@ -15,7 +15,14 @@ def main():
     payload = json.load(sys.stdin)
     checkpoint = os.environ.get("INFRAVITA_DECIDER_CHECKPOINT", DEFAULT_CHECKPOINT)
     device = os.environ.get("INFRAVITA_DECIDER_DEVICE", "cuda")
-    executable = Path(sys.executable).with_name("strands-decider")
+    executable = Path(
+        os.environ.get(
+            "INFRAVITA_DECIDER_EXECUTABLE",
+            str(Path(sys.executable).with_name("strands-decider"))
+        )
+    )
+    if not executable.is_file():
+        raise SystemExit(f"Strands Decider executable not found: {executable}")
 
     if not Path(checkpoint).is_dir():
         raise SystemExit("Checkpoint local no encontrado")

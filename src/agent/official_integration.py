@@ -10,6 +10,7 @@ from pathlib import Path
 
 from src.analysis.telemetry_context_v2 import format_historical_context
 from src.analysis.telemetry import summarize_run
+from src.analysis.telemetry_exp002 import summarize_exp002
 from src.analysis.computational_cost import calculate as calculate_computational_cost
 from src.analysis.efficiency import calculate as calculate_efficiency
 from src.decider.evidence_adapter import build_state
@@ -141,6 +142,26 @@ def safe_historical_context(root, campaign_dir, scenario):
     return format_historical_context(root, timestamp)
 
 
+def summarize_compatible(campaign_dir, run_dir, run_id, experiment_id):
+    """Select the historical telemetry adapter without mutating evidence."""
+    if experiment_id == "EXP-002":
+        return summarize_exp002(campaign_dir, run_dir, run_id)
+    return summarize_run(campaign_dir, run_id)
+
+
+def normalize_scenario_status(scenario):
+    """Preserve recorded execution status without inventing SLA results."""
+    execution = scenario.get("execution_status")
+    if execution is None:
+        execution = scenario.get("status", "UNKNOWN")
+
+    sla = scenario.get("sla_status")
+    if sla is None:
+        sla = "NOT_EVALUATED"
+
+    return execution, sla
+
+
 def build_records(root, capacity_inventory=None):
     runs = discover_runs(root)
     records = []
@@ -156,7 +177,10 @@ def build_records(root, capacity_inventory=None):
                     continue
                 raise ValueError(f"Missing normalized evidence: {run_id}")
             directory, required = runs[run_id]
-            telemetry = summarize_run(campaign_dir, run_id)
+            experiment_id = read_json(required[0])["experiment_id"]
+            telemetry = summarize_compatible(
+                campaign_dir, directory, run_id, experiment_id
+            )
             counts = metric_count(telemetry)
             if counts["cloudwatch_observations"] == 0:
                 raise ValueError(f"No CloudWatch telemetry: {run_id}")
@@ -182,8 +206,8 @@ def build_records(root, capacity_inventory=None):
             history.append({
                 "scenario_id": scenario["scenario_id"],
                 "run_id": run_id,
-                "execution_status": scenario["execution_status"],
-                "sla_status": scenario["sla_status"],
+                "execution_status": normalize_scenario_status(scenario)[0],
+                "sla_status": normalize_scenario_status(scenario)[1],
                 "telemetry": [m for m in contract["measurements"]
                               if m["value"] is not None
                               and m["aggregation"] in ("Average.mean", "mean", "run_summary")],
@@ -213,8 +237,8 @@ def build_records(root, capacity_inventory=None):
                 "experiment_id": state["experiment_id"],
                 "run_id": run_id,
                 "scenario_id": scenario["scenario_id"],
-                "execution_status": scenario["execution_status"],
-                "sla_status": scenario["sla_status"],
+                "execution_status": normalize_scenario_status(scenario)[0],
+                "sla_status": normalize_scenario_status(scenario)[1],
                 "campaign_id": campaign["campaign_id"],
                 "campaign_status": campaign["status"],
                 "evidence_sha256": evidence_hash,
