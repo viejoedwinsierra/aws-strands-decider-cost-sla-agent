@@ -3,6 +3,7 @@
 
 import argparse
 import json
+import hashlib
 from pathlib import Path
 
 OPTIONS = {
@@ -18,6 +19,29 @@ REQUIRED_METRICS = (
     "capacity_headroom",
     "infrastructure_cost",
 )
+
+
+def validate_optimization_alternative(evidence):
+    """Require an independently measured feasible alternative, not a model claim."""
+    alt = evidence.get("optimization_alternative") or {}
+    return (alt.get("validated") is True
+            and isinstance(alt.get("expected_savings_fraction"), (int, float))
+            and 0 < alt["expected_savings_fraction"] <= 1
+            and alt.get("sla_preserved") is True
+            and alt.get("telemetry_quality") == "VALID")
+
+
+def validate_capacity_bottleneck(evidence):
+    """High mean CPU alone cannot establish server saturation."""
+    bottleneck = evidence.get("capacity_bottleneck") or {}
+    signals = bottleneck.get("signals") or {}
+    return (bottleneck.get("validated") is True
+            and bottleneck.get("component") == "http_server"
+            and bottleneck.get("telemetry_quality") == "VALID"
+            and signals.get("throughput_plateau") is True
+            and signals.get("latency_or_errors_degraded") is True
+            and signals.get("locust_generator_healthy") is True
+            and signals.get("resource_constraint") is True)
 
 
 def evaluate(decision: dict, evidence: dict, policy="legacy") -> dict:
@@ -55,11 +79,13 @@ def evaluate(decision: dict, evidence: dict, policy="legacy") -> dict:
                 missing.append("cpu_efficiency")
             # No baseline/alternative capacity or credit behavior means a
             # resize recommendation is unsafe, even with low mean CPU.
-            missing.append("validated_optimization_alternative")
+            if not validate_optimization_alternative(evidence):
+                missing.append("validated_optimization_alternative")
         elif model_choice == "Scale Up":
             if sla_status not in ("FAIL", "FAILED", "BREACH"):
                 missing.append("sla_degradation_for_scale_up")
-            missing.append("validated_capacity_bottleneck")
+            if not validate_capacity_bottleneck(evidence):
+                missing.append("validated_capacity_bottleneck")
         elif model_choice == "Maintain" and sla_status != "PASS":
             missing.append("sla_pass_required_for_maintain")
     guardrail_applied = bool(missing)
@@ -70,7 +96,11 @@ def evaluate(decision: dict, evidence: dict, policy="legacy") -> dict:
         else model_choice
     )
 
+    evidence_hash = hashlib.sha256(json.dumps(evidence, sort_keys=True, default=str).encode()).hexdigest()
     return {
+        "evidence_sha256": evidence_hash,
+        "input_state": {"sla_status": evidence.get("sla_status"), "telemetry_quality": evidence.get("telemetry_quality", "UNKNOWN")},
+        "guardrail_reasons": missing,
         "experiment_id": evidence["experiment_id"],
         "run_id": evidence["run_id"],
         "model_decision": model_choice,

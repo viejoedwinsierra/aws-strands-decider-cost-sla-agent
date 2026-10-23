@@ -1,0 +1,15 @@
+schema_version: '1.0'
+experiment_id: EXP-001
+execution:
+  mode: sequential
+  stop_on_failure: true
+  cooldown_seconds: 60
+  safety_gate: true
+defaults:
+  target: private_ec2
+scenarios:
+- {id: LB-08, name: stress_600, users: 600, spawn_rate: 20, duration: 360s}
+- {id: LB-09, name: stress_750, users: 750, spawn_rate: 20, duration: 360s}
+- {id: LB-10, name: stress_900, users: 900, spawn_rate: 25, duration: 360s}
+- {id: LB-11, name: stress_1050, users: 1050, spawn_rate: 25, duration: 360s}
+- {id: LB-12, name: stress_1200, users: 1200, spawn_rate: 30, duration: 360s}

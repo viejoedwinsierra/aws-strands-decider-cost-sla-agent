@@ -15,6 +15,18 @@ export AWS_REGION="${AWS_REGION:-us-east-1}"
 : "${EXPERIMENT_ID:?}"
 : "${ENVIRONMENT:?}"
 CONFIG_YAML="$BASE_DIR/config/test_sequence.yml"
+# Explicit selection; the historical campaign remains the default.
+RUN_ARGS=()
+while (( $# )); do
+  case "$1" in
+    --sequence-config)
+      (( $# >= 2 )) || { echo "ERROR: --sequence-config needs a path" >&2; exit 2; }
+      CONFIG_YAML="$2"; shift 2 ;;
+    *) RUN_ARGS+=("$1"); shift ;;
+  esac
+done
+set -- "${RUN_ARGS[@]}"
+[[ -f "$CONFIG_YAML" ]] || { echo "ERROR: Sequence YAML not found: $CONFIG_YAML" >&2; exit 2; }
 DETAIL_SCRIPT="$BASE_DIR/../shared/monitoring/detailed_monitoring.py"
 LINUX_SCRIPT="$BASE_DIR/../shared/monitoring/linux_ssm.py"
 [[ -f "$DETAIL_SCRIPT" ]] || { echo "ERROR: Missing $DETAIL_SCRIPT" >&2; exit 1; }

@@ -1,10 +1,24 @@
 #!/usr/bin/env bash
 set -euo pipefail
+
 ROOT="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/.." && pwd)"
-python3 -m venv "$ROOT/.venv-agent"
-"$ROOT/.venv-agent/bin/python" -m pip install --upgrade pip
-"$ROOT/.venv-agent/bin/python" -m pip install -e "$ROOT"
-if [[ "${INSTALL_DECIDER:-0}" == "1" ]]; then
-  "$ROOT/.venv-agent/bin/python" -m pip install -e "$ROOT[decider]"
+cd "$ROOT"
+
+PYTHON="${INFRAVITA_PYTHON:-$HOME/.venvs/infravita-decider/bin/python}"
+
+if [[ ! -x "$PYTHON" ]]; then
+  echo "INFRAVITA_PYTHON_NOT_FOUND: $PYTHON" >&2
+  exit 1
 fi
-printf 'SETUP_COMPLETE\n'
+
+"$PYTHON" - <<'CHECK'
+import importlib.util
+
+required = ("yaml", "torch", "transformers", "strands_decider")
+missing = [name for name in required if importlib.util.find_spec(name) is None]
+
+if missing:
+    raise SystemExit("MISSING_DEPENDENCIES: " + ", ".join(missing))
+
+print("EXISTING_ENVIRONMENT_VALIDATED")
+CHECK

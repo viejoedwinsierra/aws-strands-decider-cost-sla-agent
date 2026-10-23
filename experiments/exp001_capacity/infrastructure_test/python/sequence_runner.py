@@ -314,6 +314,20 @@ def main():
                 else "FAILED"
             )
 
+            # Fail closed between stress increments; retain all partial artifacts.
+            if execution.get("safety_gate"):
+                reasons = []
+                if record["sla_status"] != "PASS":
+                    reasons.append("sla_not_pass")
+                if record["evidence_status"] != "COMPLETE":
+                    reasons.append("evidence_not_complete")
+                if record["exit_code"] != 0:
+                    reasons.append("execution_or_archive_failed")
+                record["safety_gate"] = {"approved": not reasons, "reasons": reasons}
+                if reasons:
+                    record["status"] = "FAILED"
+                    failed = True
+                    print("STRESS_SAFETY_STOP: " + ",".join(reasons), flush=True)
             save_summary(summary_path, summary)
 
             if record["status"] == "FAILED":

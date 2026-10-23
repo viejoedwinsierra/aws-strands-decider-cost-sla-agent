@@ -8,6 +8,7 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path
 
+from src.analysis.telemetry_context_v2 import format_historical_context
 from src.analysis.telemetry import summarize_run
 from src.analysis.computational_cost import calculate as calculate_computational_cost
 from src.analysis.efficiency import calculate as calculate_efficiency
@@ -74,6 +75,72 @@ def discover_runs(root):
     return runs
 
 
+
+
+def structured_historical_context(root, campaign_dir, scenario):
+    """Build historical telemetry with conservative timestamp resolution."""
+    from src.analysis.telemetry_context_v2 import build_historical_context
+
+    timestamp = scenario.get("finished_at_utc")
+
+    if not timestamp:
+        timeline_path = campaign_dir / "experiment_timeline.json"
+        if timeline_path.is_file():
+            timeline = read_json(timeline_path)
+            if isinstance(timeline, dict):
+                scenarios = timeline.get("scenarios", [])
+                if isinstance(scenarios, list):
+                    matches = [
+                        item for item in scenarios
+                        if isinstance(item, dict)
+                        and item.get("run_id") == scenario.get("run_id")
+                        and item.get("finished_at_utc")
+                    ]
+                    if len(matches) == 1:
+                        timestamp = matches[0]["finished_at_utc"]
+
+    if not timestamp:
+        return {
+            "as_of": None,
+            "telemetry_quality": "UNKNOWN",
+            "measurements": [],
+            "limitations": [
+                "Completion timestamp unavailable",
+                "Historical telemetry not inferred",
+            ],
+        }
+
+    return build_historical_context(root, timestamp)
+
+
+def safe_historical_context(root, campaign_dir, scenario):
+    """Resolve decision time without fabricating timestamps."""
+    timestamp = scenario.get("finished_at_utc")
+
+    if not timestamp:
+        timeline_path = campaign_dir / "experiment_timeline.json"
+
+        if timeline_path.is_file():
+            timeline = read_json(timeline_path)
+            matches = [
+                item for item in timeline.get("scenarios", [])
+                if item.get("run_id") == scenario.get("run_id")
+                and item.get("finished_at_utc")
+            ]
+
+            if len(matches) == 1:
+                timestamp = matches[0]["finished_at_utc"]
+
+    if not timestamp:
+        return (
+            ". Historical telemetry context unavailable: "
+            "scenario completion timestamp missing; "
+            "no historical measurements inferred."
+        )
+
+    return format_historical_context(root, timestamp)
+
+
 def build_records(root, capacity_inventory=None):
     runs = discover_runs(root)
     records = []
@@ -82,6 +149,11 @@ def build_records(root, capacity_inventory=None):
         for scenario in campaign["scenarios"]:
             run_id = scenario["run_id"]
             if run_id not in runs:
+                if (scenario.get("execution_status") is None
+                        and scenario.get("sla_status") == "NOT_EVALUATED"):
+                    # Planned scenario skipped by the campaign safety gate.
+                    # Never invent telemetry or infer a decision for it.
+                    continue
                 raise ValueError(f"Missing normalized evidence: {run_id}")
             directory, required = runs[run_id]
             telemetry = summarize_run(campaign_dir, run_id)
@@ -116,8 +188,13 @@ def build_records(root, capacity_inventory=None):
                               if m["value"] is not None
                               and m["aggregation"] in ("Average.mean", "mean", "run_summary")],
             })
+            historical_telemetry = structured_historical_context(
+                root, campaign_dir, scenario
+            )
             state = build_state(directory, telemetry_context=(
                 format_context(contract, history)
+                + ". Historical telemetry context (timestamp-filtered, quality not validated): "
+                + json.dumps(historical_telemetry, sort_keys=True)
                 + ". Computational resource consumption (estimated, not billing): "
                 + json.dumps(computational_cost, sort_keys=True)
                 + ". HTTP service efficiency (not monetary): "
@@ -148,6 +225,7 @@ def build_records(root, capacity_inventory=None):
                 "efficiency": efficiency,
                 "additional_metrics": additional_metrics,
                 "historical_context": list(history),
+                "historical_telemetry": historical_telemetry,
                 "state": state,
             })
     return records
