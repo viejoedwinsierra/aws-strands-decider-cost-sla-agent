@@ -47,9 +47,30 @@ def discover(local_root: Path) -> tuple[list[dict], list[dict]]:
     return valid, skipped
 
 
-def run_cycle(args, config: dict) -> dict:
+def resolve_source(args) -> str:
+    """Preserve --sync as the legacy S3 selector; default to local evidence."""
+    source = getattr(args, "source", None)
+    legacy_sync = getattr(args, "sync", False)
+    if source is not None and source not in ("local", "s3"):
+        raise ValueError(f"Unsupported evidence source: {source}")
+    if legacy_sync and source == "local":
+        raise ValueError("--sync conflicts with --source local")
+    return "s3" if legacy_sync or source == "s3" else "local"
+
+
+def load_source_config(args):
+    """Only validate S3 configuration when the user selects remote evidence."""
+    if resolve_source(args) == "s3":
+        return load_config(Path(args.config))
+    return None
+
+
+def run_cycle(args, config: dict | None) -> dict:
     local_root = Path(args.local_root).resolve()
-    if args.sync:
+    source = resolve_source(args)
+    if source == "s3":
+        if config is None:
+            raise ValueError("S3 source requires a loaded evidence configuration")
         sync_sources(config["sources"], local_root, args.profile, args.region)
     records, skipped = discover(local_root)
     checkpoint_path = Path(args.output).resolve().parent / "checkpoint.json"
@@ -90,11 +111,15 @@ def main() -> None:
     parser.add_argument("--output", default=".infravita/reports/latest.json")
     parser.add_argument("--profile", default=os.environ.get("AWS_PROFILE", "academy-sandbox"))
     parser.add_argument("--region", default=os.environ.get("AWS_REGION", "us-east-1"))
-    parser.add_argument("--sync", action="store_true")
+    parser.add_argument("--sync", action="store_true", help="Legacy alias for --source s3")
+    parser.add_argument("--source", choices=("local", "s3"), default=None, help="Evidence source (default: local)")
     parser.add_argument("--watch", action="store_true")
     parser.add_argument("--decider-command", nargs="+", help="Verified real Decider CLI accepting state JSON on stdin and returning model decision JSON on stdout")
     args = parser.parse_args()
-    config = load_config(Path(args.config))
+    try:
+        config = load_source_config(args)
+    except (OSError, ValueError) as exc:
+        parser.error(str(exc))
     while True:
         try:
             report = run_cycle(args, config)
@@ -107,7 +132,7 @@ def main() -> None:
             if report["status"] != "SUCCESS":
                 raise SystemExit(2)
             break
-        time.sleep(config["interval_seconds"])
+        time.sleep(config["interval_seconds"] if config else 60)
 
 
 if __name__ == "__main__":
