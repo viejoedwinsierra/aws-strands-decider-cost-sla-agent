@@ -255,9 +255,15 @@ def build_records(root, capacity_inventory=None):
     return records
 
 
-def infer(record):
+def infer(record, provider='local'):
     result = subprocess.run(
-        [sys.executable, "-m", "src.decider.local_bridge"],
+        [
+            sys.executable,
+            "-m",
+            "src.decider.bedrock_bridge"
+            if provider == "bedrock"
+            else "src.decider.local_bridge",
+        ],
         input=json.dumps(record["state"]),
         text=True,
         capture_output=True,
@@ -296,7 +302,7 @@ def execute(args):
         }
         result["telemetry"] = record["telemetry"]
         if args.infer:
-            result.update(infer(record))
+            result.update(infer(record, provider=getattr(args, 'provider', 'local')))
         decisions.append(result)
         print(
             record["scenario_id"],
@@ -309,7 +315,12 @@ def execute(args):
         "schema_version": "2.1",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "status": "SUCCESS",
-        "model_backend": "local-strands-decider-v21" if args.infer else "disabled",
+        "model_backend": (
+            "amazon-bedrock"
+            if args.infer and getattr(args, "provider", "local") == "bedrock"
+            else "local-strands-decider-v21" if args.infer
+            else "disabled"
+        ),
         "total_runs": len(decisions),
         "total_cloudwatch_observations": sum(
             d["telemetry_counts"]["cloudwatch_observations"] for d in decisions
@@ -334,6 +345,11 @@ def main():
     parser.add_argument("--output",
                         default=".infravita/reports/official_v21.json")
     parser.add_argument("--infer", action="store_true")
+    parser.add_argument(
+        "--provider",
+        choices=("local", "bedrock"),
+        default="local",
+    )
     parser.add_argument("--decision-policy", choices=("legacy", "computational-v1"), default="legacy")
     parser.add_argument("--capacity-inventory", help="Optional JSON mapping instance IDs to vcpu and memory_gib")
     execute(parser.parse_args())

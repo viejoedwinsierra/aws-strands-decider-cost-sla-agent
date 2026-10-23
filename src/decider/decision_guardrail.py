@@ -54,11 +54,16 @@ def evaluate(decision: dict, evidence: dict, policy="legacy") -> dict:
     probability = answer["probabilities"][model_choice]
     confidence = answer["confidence"]
 
-    if not 0 <= probability <= 1:
-        raise ValueError("Invalid model probability")
+    is_bedrock = decision.get("provider") == "amazon-bedrock"
 
-    if not 0 <= confidence <= 1:
-        raise ValueError("Invalid model confidence")
+    if is_bedrock:
+        if probability is not None or confidence is not None:
+            raise ValueError("Uncalibrated Bedrock confidence must be null")
+    else:
+        if not isinstance(probability, (int, float)) or not 0 <= probability <= 1:
+            raise ValueError("Invalid model probability")
+        if not isinstance(confidence, (int, float)) or not 0 <= confidence <= 1:
+            raise ValueError("Invalid model confidence")
 
     additional_metrics = evidence.get("additional_metrics", {})
 
@@ -106,6 +111,7 @@ def evaluate(decision: dict, evidence: dict, policy="legacy") -> dict:
         "model_decision": model_choice,
         "model_probability": probability,
         "model_confidence": confidence,
+        "confidence_calibrated": not is_bedrock,
         "effective_decision": effective_choice,
         "guardrail_applied": guardrail_applied,
         "decision_overridden": effective_choice != model_choice,
