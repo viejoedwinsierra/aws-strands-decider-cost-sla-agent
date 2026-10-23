@@ -9,26 +9,36 @@ defaults:
 scenarios:
 - id: LB-01
   name: baseline
-  users: 200
-  spawn_rate: 10
-  duration: 180s
-- id: LB-02
-  name: incremental
   users: 10
   spawn_rate: 2
-  duration: 60s
+  duration: 360s
+- id: LB-02
+  name: incremental
+  users: 25
+  spawn_rate: 3
+  duration: 360s
 - id: LB-03
   name: medium_load
-  users: 20
-  spawn_rate: 3
-  duration: 60s
+  users: 60
+  spawn_rate: 5
+  duration: 360s
 - id: LB-04
   name: high_load
-  users: 40
-  spawn_rate: 5
-  duration: 60s
+  users: 120
+  spawn_rate: 10
+  duration: 360s
 - id: LB-05
   name: stress
-  users: 60
+  users: 200
   spawn_rate: 10
-  duration: 60s
+  duration: 360s
+- id: LB-06
+  name: high_load
+  users: 120
+  spawn_rate: 10
+  duration: 360s
+- id: LB-07
+  name: stress
+  users: 500
+  spawn_rate: 20
+  duration: 360s

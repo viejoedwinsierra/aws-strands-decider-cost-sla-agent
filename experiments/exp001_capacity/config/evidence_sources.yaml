@@ -1,0 +1,30 @@
+schema_version: "1.0"
+
+discovery:
+  mode: polling
+  interval_seconds: 60
+
+sources:
+  - id: exp001
+    enabled: true
+    uri: s3://${EVIDENCE_BUCKET}/experiments/exp001_capacity/results/
+    recursive: true
+
+  - id: exp002
+    enabled: true
+    uri: s3://${EVIDENCE_BUCKET}/experiments/exp002_component_capacity/results/
+    recursive: true
+
+  - id: additional
+    enabled: false
+    uri: s3://${EVIDENCE_BUCKET}/experiments/
+    recursive: true
+
+processing:
+  required_manifest: evidence_manifest.json
+  deduplicate: true
+  skip_incomplete: true
+  max_objects_per_scan: 1000
+
+output:
+  decision_reports_prefix: decisions/

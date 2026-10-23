@@ -1,0 +1,11 @@
+schema_version: "1.0"
+discovery:
+  mode: polling
+  interval_seconds: 60
+sources:
+  - id: exp001
+    enabled: true
+    uri: s3://${EVIDENCE_BUCKET}/experiments/exp001_capacity/results/
+  - id: exp002
+    enabled: true
+    uri: s3://${EVIDENCE_BUCKET}/experiments/exp002_component_capacity/results/

@@ -12,7 +12,7 @@ license = "MIT"
 authors = [
     { name = "Edwin Sierra" }
 ]
-dependencies = []
+dependencies = ["PyYAML>=6,<7"]
 
 [project.optional-dependencies]
 decider = [

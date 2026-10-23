@@ -263,3 +263,15 @@ experiments/**/outputs/
 /exp001_recovery_patch.zip
 /tests/exp001_recovery_patch.zip
 *.pre_recovery_backup
+
+# InfraVita V2 runtime
+.venv-agent/
+.infravita/
+.pytest_cache/
+__pycache__/
+*.pyc
+*.bak
+*.pre_recovery_backup
+
+# Local credentials
+**/aws_credentials.txt
