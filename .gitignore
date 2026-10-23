@@ -220,10 +220,9 @@ __marimo__/
 .streamlit/secrets.toml
 
 # EXP-001 runtime artifacts
-experiments/exp001_capacity/results/*
-!experiments/exp001_capacity/results/.gitkeep
-experiments/exp001_capacity/evidence/*
-!experiments/exp001_capacity/evidence/.gitkeep
+!experiments/**/results/
+!experiments/**/results/**/
+!experiments/**/results/**/*.zip
 
 # EXP-001 local configuration
 experiments/exp001_capacity/config/experiment.env
@@ -275,3 +274,6 @@ __pycache__/
 
 # Local credentials
 **/aws_credentials.txt
+
+# InfraVita V2 - Local Python integration environment
+/.integration_v64/
