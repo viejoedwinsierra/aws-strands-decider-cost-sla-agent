@@ -11,7 +11,7 @@ def load_json(path: Path) -> dict:
         return json.load(file)
 
 
-def build_state(run_directory: Path) -> dict:
+def build_state(run_directory: Path, telemetry_context: str | None = None) -> dict:
     metrics = load_json(run_directory / "metrics_normalized.json")
     sla = load_json(run_directory / "sla_evaluation.json")
 
@@ -22,7 +22,7 @@ def build_state(run_directory: Path) -> dict:
     observations = metrics["observations"]
     policy = sla["policy"]
 
-    state = (
+    state_base = (
         f"Experiment: {metrics['experiment_id']}. "
         f"Run: {metrics['run_id']}. "
         f"HTTP requests: {observations['request_count']}. "
@@ -33,6 +33,9 @@ def build_state(run_directory: Path) -> dict:
         f"Throughput: {observations['throughput_rps']:.4f} requests/second "
         f"(minimum {policy['min_throughput_rps']} requests/second). "
         f"Experimental SLA status: {sla['overall_status']}. "
+    )
+    state = state_base + (
+        telemetry_context if telemetry_context is not None else
         "CPU utilization, memory utilization, capacity headroom, "
         "and infrastructure costs are not available in this evidence."
     )
