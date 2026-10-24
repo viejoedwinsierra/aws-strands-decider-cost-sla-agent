@@ -1,0 +1,87 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1120" viewBox="0 0 1600 1120">
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto"><path d="M0 0 L10 5 L0 10 Z" fill="#526F8A"/></marker></defs>
+<rect width="1600" height="1120" fill="#F7F9FC"/>
+<text x="48" y="56" font-family="Arial,Helvetica,sans-serif" font-size="32" fill="#183451" font-weight="bold" text-anchor="start">InfraVita V2  |  Evidence-to-decision architecture</text>
+<text x="48" y="85" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#5A7086" font-weight="normal" text-anchor="start">Implemented experimental paths, dual-model inference and auditable guardrails</text>
+<rect x="35" y="112" width="1530" height="250" rx="20" fill="#FFFFFF" stroke="#8CAACA" stroke-width="2"/>
+<rect x="52" y="127" width="1496" height="43" rx="8" fill="#EAF1FA" stroke="#EAF1FA" stroke-width="0"/>
+<text x="70" y="155" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#244F77" font-weight="bold" text-anchor="start">1  AWS Academy sandbox  |  historical experiment infrastructure</text>
+<rect x="62" y="190" width="345" height="140" rx="15" fill="#EAF2FC" stroke="#A2BBD5" stroke-width="2"/>
+<text x="79" y="222" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#244F77" font-weight="bold" text-anchor="start">EXP-001  •  HTTP capacity</text>
+<text x="79" y="249" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">EC2 Locust  →  EC2 HTTP service</text>
+<text x="79" y="273" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Load campaigns / response behavior</text>
+<text x="79" y="297" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">EC2 and network/security controls</text>
+<rect x="427" y="190" width="345" height="140" rx="15" fill="#EAF7F1" stroke="#A7CABB" stroke-width="2"/>
+<text x="444" y="222" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#286650" font-weight="bold" text-anchor="start">EXP-002  •  API + database</text>
+<text x="444" y="249" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">FastAPI on EC2  →  PostgreSQL on EC2</text>
+<text x="444" y="273" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Application / database load</text>
+<text x="444" y="297" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">EC2 and network/security controls</text>
+<rect x="792" y="190" width="355" height="140" rx="15" fill="#EFF4FA" stroke="#A5BDD5" stroke-width="2"/>
+<text x="809" y="222" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#244F77" font-weight="bold" text-anchor="start">Observability + access</text>
+<text x="809" y="249" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">CloudWatch resource time windows</text>
+<text x="809" y="273" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">SSM sessions / Linux snapshots</text>
+<text x="809" y="297" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">PRE / RUN / POST</text>
+<rect x="1167" y="190" width="366" height="140" rx="15" fill="#FFF4E5" stroke="#D7B68D" stroke-width="2"/>
+<text x="1184" y="222" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#80521F" font-weight="bold" text-anchor="start">S3 evidence repository</text>
+<text x="1184" y="249" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">RUN_ID + experiment metadata</text>
+<text x="1184" y="273" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Tagged resources and artifacts</text>
+<text x="1184" y="297" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Historical evidence; immutable audit goal</text>
+<path d="M407 261 L424 261" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<path d="M772 261 L789 261" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<path d="M1147 261 L1164 261" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<rect x="35" y="392" width="1530" height="160" rx="20" fill="#FFFFFF" stroke="#8CAACA" stroke-width="2"/>
+<rect x="52" y="408" width="1496" height="39" rx="8" fill="#EAF1FA" stroke="#EAF1FA" stroke-width="0"/>
+<text x="70" y="435" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#244F77" font-weight="bold" text-anchor="start">2  Local evidence processing  |  reusable pipeline</text>
+<rect x="65" y="463" width="415" height="70" rx="15" fill="#EAF2FC" stroke="#A2BBD5" stroke-width="2"/>
+<text x="82" y="495" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#244F77" font-weight="bold" text-anchor="start">Historical S3 sync / local cache</text>
+<text x="82" y="522" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Offline processing does not require live EC2</text>
+<rect x="512" y="463" width="450" height="70" rx="15" fill="#E9F0FA" stroke="#A2BBD5" stroke-width="2"/>
+<text x="529" y="495" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#244F77" font-weight="bold" text-anchor="start">RUN_ID discovery + normalization</text>
+<text x="529" y="522" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Evidence and telemetry mapped to model input</text>
+<rect x="994" y="463" width="535" height="70" rx="15" fill="#EDF5F9" stroke="#A2BBD5" stroke-width="2"/>
+<text x="1011" y="495" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#244F77" font-weight="bold" text-anchor="start">Integrity and context</text>
+<text x="1011" y="522" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Hashes • time windows • missing SLA / telemetry</text>
+<path d="M480 500 L509 500" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<path d="M962 500 L991 500" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<path d="M1348 331 L1348 385" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M1348 385 L267 385" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M267 385 L267 460" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<rect x="35" y="582" width="1530" height="292" rx="20" fill="#FFFFFF" stroke="#9AAFC7" stroke-width="2"/>
+<rect x="52" y="598" width="1496" height="39" rx="8" fill="#ECEFFA" stroke="#ECEFFA" stroke-width="0"/>
+<text x="70" y="625" font-family="Arial,Helvetica,sans-serif" font-size="20" fill="#344E73" font-weight="bold" text-anchor="start">3  Shared evidence input  →  two inference providers  →  policy</text>
+<rect x="65" y="663" width="355" height="145" rx="15" fill="#EEE8F9" stroke="#B5A3D1" stroke-width="2"/>
+<text x="82" y="695" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#59447D" font-weight="bold" text-anchor="start">Local model</text>
+<text x="82" y="722" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Strands Decider 2B v21</text>
+<text x="82" y="746" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Runs on existing local runtime</text>
+<text x="82" y="770" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">No Bedrock API call</text>
+<rect x="445" y="663" width="355" height="145" rx="15" fill="#FFF1E1" stroke="#D8B48B" stroke-width="2"/>
+<text x="462" y="695" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#84541F" font-weight="bold" text-anchor="start">Amazon Bedrock</text>
+<text x="462" y="722" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Nova Micro • remote inference</text>
+<text x="462" y="746" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Separate AWS account / API key</text>
+<text x="462" y="770" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Provider invocation can incur cost</text>
+<rect x="825" y="663" width="345" height="145" rx="15" fill="#E9F6F0" stroke="#A6C9B8" stroke-width="2"/>
+<text x="842" y="695" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#26634C" font-weight="bold" text-anchor="start">Computational policy</text>
+<text x="842" y="722" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">computational-v1</text>
+<text x="842" y="746" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Evidence sufficiency + SLA status</text>
+<text x="842" y="770" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">May override model recommendation</text>
+<rect x="1195" y="663" width="335" height="145" rx="15" fill="#EAF2FC" stroke="#A2BBD5" stroke-width="2"/>
+<text x="1212" y="695" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#244F77" font-weight="bold" text-anchor="start">Audit outputs</text>
+<text x="1212" y="722" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Per-RUN_ID JSON reports</text>
+<text x="1212" y="746" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Local vs Bedrock comparison</text>
+<text x="1212" y="770" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#41576C" font-weight="normal" text-anchor="start">Raw and effective decisions</text>
+<path d="M410 735 L442 735" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<path d="M800 735 L822 735" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<path d="M1170 735 L1192 735" fill="none" stroke="#526F8A" stroke-width="2.7"  marker-end="url(#arrow)"/>
+<text x="76" y="840" font-family="Arial,Helvetica,sans-serif" font-size="16" fill="#425D77" font-weight="normal" text-anchor="start">Both providers receive comparable normalized evidence; they are alternatives, not a serial model chain.</text>
+<path d="M690 535 L690 574" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M690 574 L235 574" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M235 574 L235 660" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M690 574 L625 574" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<path d="M625 574 L625 660" fill="none" stroke="#526F8A" stroke-width="2.7" stroke-dasharray="7 6" marker-end="url(#arrow)"/>
+<rect x="35" y="903" width="1530" height="156" rx="20" fill="#FFFFFF" stroke="#C0CEDC" stroke-width="2"/>
+<text x="60" y="937" font-family="Arial,Helvetica,sans-serif" font-size="21" fill="#244F77" font-weight="bold" text-anchor="start">4  Interpretation and limits</text>
+<text x="62" y="974" font-family="Arial,Helvetica,sans-serif" font-size="18" fill="#294764" font-weight="normal" text-anchor="start">20 historical RUN_IDs (10 EXP-001 + 10 EXP-002) × 2 providers = 40 model inferences.</text>
+<text x="62" y="1003" font-family="Arial,Helvetica,sans-serif" font-size="17" fill="#294764" font-weight="normal" text-anchor="start">EXP-002: SLA NOT_EVALUATED → policy can return Insufficient Evidence regardless of model proposal.</text>
+<text x="62" y="1031" font-family="Arial,Helvetica,sans-serif" font-size="16" fill="#64788B" font-weight="normal" text-anchor="start">Advisory only: no autonomous scaling; no measured dollar savings; historical AWS infrastructure is decommissioned.</text>
+<text x="47" y="1091" font-family="Arial,Helvetica,sans-serif" font-size="14" fill="#61788F" font-weight="normal" text-anchor="start">Solid arrows: conceptual process   •   Dashed arrows: historical evidence transfer / fan-out   •   Credential boundaries kept separate</text>
+</svg>
